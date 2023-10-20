@@ -1,3 +1,4 @@
+use mysql_async::prelude::FromValue;
 use std::{
     future::Future,
     sync::{atomic::AtomicUsize, Arc},
@@ -6,15 +7,26 @@ use std::{
 use tower::Service;
 
 pub mod auth;
-
+pub mod images;
+pub mod lists;
 pub struct AppState {
     pub origin: String,
+    pub pool: mysql_async::Pool,
 }
 
 impl AppState {
     pub fn new() -> Arc<Self> {
+        let opts = mysql_async::OptsBuilder::default()
+            .ip_or_hostname("localhost")
+            .prefer_socket(true)
+            .db_name(Some("listo"))
+            .user(Some("root"))
+            .pass(Some("password"))
+            .tcp_port(3307);
+
         Arc::new(Self {
             origin: String::from("My Buthole 🙂"),
+            pool: mysql_async::Pool::new(opts),
         })
     }
 }
@@ -71,4 +83,26 @@ where
             Ok(response)
         })
     }
+}
+
+/// Finds a value T in a row by it's column name
+///
+/// # Example
+/// ```rust,ignore
+/// let id: u64 = find_col(&mut value, "ID").unwrap_or(0);
+/// ```
+pub fn find_col<T>(
+    row: &mut mysql_async::Row,
+    col_name: &str,
+) -> Option<Result<T, mysql_async::FromValueError>>
+where
+    T: FromValue,
+{
+    let (i, ..) = row
+        .columns_ref()
+        .iter()
+        .enumerate()
+        .find(|(_, col)| col.name_str() == col_name)?;
+
+    row.take_opt(i)
 }
