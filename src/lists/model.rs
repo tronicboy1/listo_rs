@@ -155,7 +155,7 @@ impl Item {
             .prep("DELETE FROM list_items WHERE item_id = ?;")
             .await?;
 
-        conn.exec_drop(stmt, ()).await
+        conn.exec_drop(stmt, vec![item_id]).await
     }
 }
 
