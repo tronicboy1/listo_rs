@@ -11,7 +11,7 @@ use mysql_async::Pool;
 use serde::Deserialize;
 use tower::ServiceBuilder;
 
-use crate::auth::{JwTokenLayer, Claims};
+use crate::auth::{JwTokenReaderLayer, Claims};
 
 use self::model::{Item, List};
 
@@ -38,7 +38,7 @@ impl ListRouter {
                 .route("/:list_id/items", get(get_list_items))
                 .route("/:list_id/items", post(add_item))
                 .route("/:list_id/items/:item_id", delete(delete_item))
-                .layer(ServiceBuilder::new().layer(JwTokenLayer))
+                .layer(ServiceBuilder::new().layer(JwTokenReaderLayer))
                 .with_state(ListState::new(pool)),
         )
     }

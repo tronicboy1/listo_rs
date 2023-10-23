@@ -9,17 +9,17 @@ use super::{Claims, SECRET_KEY};
 /// Adds Jw Token claims data into request if the user is authenticated and has
 /// the JWT in it's request.
 #[derive(Debug, Clone)]
-pub struct JwTokenService<S> {
+pub struct JwTokenReaderService<S> {
     inner: S,
 }
 
-impl<S> JwTokenService<S> {
+impl<S> JwTokenReaderService<S> {
     pub fn new(inner: S) -> Self {
         Self { inner }
     }
 }
 
-impl<S, B> Service<Request<B>> for JwTokenService<S>
+impl<S, B> Service<Request<B>> for JwTokenReaderService<S>
 where
     S: Service<Request<B>>,
 {
@@ -66,12 +66,12 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct JwTokenLayer;
+pub struct JwTokenReaderLayer;
 
-impl<S> Layer<S> for JwTokenLayer {
-    type Service = JwTokenService<S>;
+impl<S> Layer<S> for JwTokenReaderLayer {
+    type Service = JwTokenReaderService<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        JwTokenService { inner }
+        JwTokenReaderService { inner }
     }
 }

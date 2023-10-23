@@ -16,7 +16,7 @@ pub struct AuthRouter(Router);
 
 mod auth_service;
 
-pub use auth_service::JwTokenLayer;
+pub use auth_service::JwTokenReaderLayer;
 
 struct AuthState {}
 
