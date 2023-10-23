@@ -45,7 +45,7 @@ struct NewUser {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
-    sub: u64,
+    pub sub: u64,
     exp: usize,
     iss: String,
 }

@@ -14,12 +14,15 @@ pub struct List {
 }
 
 impl List {
-    pub async fn paginate(pool: Pool) -> Result<Vec<List>, mysql_async::Error> {
+    pub async fn paginate(pool: Pool, user_id: u64) -> Result<Vec<List>, mysql_async::Error> {
         let mut conn = pool.get_conn().await?;
 
-        let stmt = conn.prep("SELECT * FROM lists LIMIT 10;").await?;
+        let stmt = conn.prep("SELECT * FROM lists
+        INNER JOIN users_families ON lists.family_id = users_families.family_id
+        WHERE users_families.user_id = ?
+        LIMIT 10;").await?;
 
-        let lists: Vec<Self> = conn.exec(stmt, ()).await?;
+        let lists: Vec<Self> = conn.exec(stmt, vec![user_id]).await?;
         let len = lists.len();
 
         let list_handles: Vec<_> = lists

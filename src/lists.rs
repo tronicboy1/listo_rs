@@ -4,14 +4,14 @@ use axum::{
     extract::{Path, State},
     response::IntoResponse,
     routing::{delete, get, post},
-    Json, Router,
+    Json, Router, Extension,
 };
 use http::StatusCode;
 use mysql_async::Pool;
 use serde::Deserialize;
 use tower::ServiceBuilder;
 
-use crate::auth::JwTokenReaderLayer;
+use crate::auth::{JwTokenReaderLayer, Claims};
 
 use self::model::{Item, List};
 
@@ -51,8 +51,8 @@ impl ListState {
     }
 }
 
-async fn get_lists(State(state): State<Arc<ListState>>) -> Result<impl IntoResponse, StatusCode> {
-    let lists = List::paginate(state.pool.clone())
+async fn get_lists(State(state): State<Arc<ListState>>, Extension(user): Extension<Claims>) -> Result<impl IntoResponse, StatusCode> {
+    let lists = List::paginate(state.pool.clone(), user.sub)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
