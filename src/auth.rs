@@ -15,8 +15,10 @@ use serde::{Deserialize, Serialize};
 pub struct AuthRouter(Router);
 
 mod token_reader;
+mod token_guard;
 
 pub use token_reader::JwTokenReaderLayer;
+pub use token_guard::AuthGuardLayer;
 
 struct AuthState {}
 
