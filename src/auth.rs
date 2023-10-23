@@ -14,9 +14,9 @@ use jsonwebtoken::{encode, EncodingKey};
 use serde::{Deserialize, Serialize};
 pub struct AuthRouter(Router);
 
-mod auth_service;
+mod token_reader;
 
-pub use auth_service::JwTokenReaderLayer;
+pub use token_reader::JwTokenReaderLayer;
 
 struct AuthState {}
 
@@ -45,7 +45,7 @@ struct NewUser {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
-    sub: String,
+    sub: u64,
     exp: usize,
     iss: String,
 }
@@ -56,7 +56,7 @@ async fn create_user(
     println!("{}", username);
 
     let claim = Claims {
-        sub: username,
+        sub: 1,
         exp: 1000000000000,
         iss: String::from("listo_rs"),
     };

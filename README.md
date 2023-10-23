@@ -38,3 +38,26 @@ CREATE TABLE list_items (
   CONSTRAINT same_item_per_list UNIQUE (list_id, `name`)
 );
 ```
+
+### Users
+
+```sql
+CREATE TABLE users (
+  user_id SERIAL PRIMARY KEY,
+  email VARCHAR(320) NOT NULL,
+  UNIQUE(email)
+);
+```
+
+### Users-Families
+
+```sql
+CREATE TABLE users_families (
+  user_family_id SERIAL PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  family_id BIGINT UNSIGNED NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(user_id),
+  FOREIGN KEY (family_id) REFERENCES families(family_id),
+  CONSTRAINT no_same_user_in_family UNIQUE (user_id, family_id)
+);
+```

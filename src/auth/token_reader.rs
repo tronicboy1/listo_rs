@@ -1,5 +1,9 @@
-use axum::http::Request;
+use std::pin::Pin;
+
+use axum::{http::Request, response::IntoResponse};
 use cookie::Cookie;
+use futures::Future;
+use http::StatusCode;
 use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
 
 use tower::{Layer, Service};
@@ -21,11 +25,13 @@ impl<S> JwTokenReaderService<S> {
 
 impl<S, B> Service<Request<B>> for JwTokenReaderService<S>
 where
-    S: Service<Request<B>>,
+    S: Service<Request<B>, Response = axum::response::Response> + Send + 'static,
+    S::Future: Send + 'static,
 {
     type Response = S::Response;
     type Error = S::Error;
-    type Future = S::Future;
+    type Future =
+        Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send + 'static>>;
 
     fn poll_ready(
         &mut self,
@@ -37,7 +43,6 @@ where
 
     fn call(&mut self, mut req: Request<B>) -> Self::Future {
         let validation = Validation::new(Algorithm::HS256);
-
 
         let token = req
             .headers()
@@ -57,11 +62,14 @@ where
                 .ok()
             });
 
-        if let Some(token) = token {
-            req.extensions_mut().insert(token.claims);
-        }
+        match token {
+            Some(token) => {
+                req.extensions_mut().insert(token.claims);
 
-        self.inner.call(req)
+                Box::pin(self.inner.call(req))
+            }
+            None => Box::pin(async { Ok(StatusCode::UNAUTHORIZED.into_response()) }),
+        }
     }
 }
 

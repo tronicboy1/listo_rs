@@ -9,6 +9,8 @@ use tower::Service;
 pub mod auth;
 pub mod images;
 pub mod lists;
+pub mod user;
+pub mod families;
 pub struct AppState {
     pub origin: String,
     pub pool: mysql_async::Pool,
@@ -105,4 +107,13 @@ where
         .find(|(_, col)| col.name_str() == col_name)?;
 
     row.take_opt(i)
+}
+
+#[macro_export]
+macro_rules! find_col_or_err {
+    ($row: ident, $col_name: expr) => {{
+        crate::find_col(&mut $row, $col_name)
+            .expect(&format!("{} must be included in SELECT", $col_name))
+            .map_err(|_| mysql_async::FromRowError($row.clone()))
+    }};
 }
