@@ -1,8 +1,22 @@
+const SECRET_KEY: &'static [u8] = b"my-secret";
+
 use std::sync::Arc;
 
-use axum::{http::StatusCode, routing::post, Json, Router};
-use serde::Deserialize;
+use axum::{
+    http::StatusCode,
+    response::{AppendHeaders, IntoResponse},
+    routing::post,
+    Json, Router,
+};
+use cookie::Cookie;
+use http::header::SET_COOKIE;
+use jsonwebtoken::{encode, EncodingKey};
+use serde::{Deserialize, Serialize};
 pub struct AuthRouter(Router);
+
+mod auth_service;
+
+pub use auth_service::JwTokenLayer;
 
 struct AuthState {}
 
@@ -29,8 +43,36 @@ struct NewUser {
     username: String,
 }
 
-async fn create_user(Json(NewUser { username }): Json<NewUser>) -> (StatusCode, Json<u64>) {
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Claims {
+    sub: String,
+    exp: usize,
+    iss: String,
+}
+
+async fn create_user(
+    Json(NewUser { username }): Json<NewUser>,
+) -> Result<impl IntoResponse, StatusCode> {
     println!("{}", username);
 
-    (StatusCode::CREATED, Json(42))
+    let claim = Claims {
+        sub: username,
+        exp: 1000000000000,
+        iss: String::from("listo_rs"),
+    };
+
+    let token = encode(
+        &jsonwebtoken::Header::default(),
+        &claim,
+        &EncodingKey::from_secret(SECRET_KEY),
+    )
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let cookie: Cookie = Cookie::build(("jwt", token)).path("/").into();
+
+    Ok((
+        StatusCode::CREATED,
+        AppendHeaders([(SET_COOKIE, cookie.to_string())]),
+        Json(42),
+    ))
 }

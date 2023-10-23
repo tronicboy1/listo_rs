@@ -4,11 +4,14 @@ use axum::{
     extract::{Path, State},
     response::IntoResponse,
     routing::{delete, get, post},
-    Json, Router,
+    Json, Router, Extension,
 };
 use http::StatusCode;
 use mysql_async::Pool;
 use serde::Deserialize;
+use tower::ServiceBuilder;
+
+use crate::auth::{JwTokenLayer, Claims};
 
 use self::model::{Item, List};
 
@@ -35,6 +38,7 @@ impl ListRouter {
                 .route("/:list_id/items", get(get_list_items))
                 .route("/:list_id/items", post(add_item))
                 .route("/:list_id/items/:item_id", delete(delete_item))
+                .layer(ServiceBuilder::new().layer(JwTokenLayer))
                 .with_state(ListState::new(pool)),
         )
     }
@@ -57,7 +61,10 @@ async fn get_lists(State(state): State<Arc<ListState>>) -> Result<impl IntoRespo
 async fn get_list(
     State(state): State<Arc<ListState>>,
     Path(list_id): Path<u64>,
+    Extension(current_user): Extension<Claims>,
 ) -> Result<axum::response::Response, StatusCode> {
+    println!("JWT: {:?}", current_user);
+
     let result = List::get(state.pool.clone(), list_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
