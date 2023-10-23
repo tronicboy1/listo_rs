@@ -6,18 +6,20 @@ use tower::{Layer, Service};
 
 use super::{Claims, SECRET_KEY};
 
+/// Adds Jw Token claims data into request if the user is authenticated and has
+/// the JWT in it's request.
 #[derive(Debug, Clone)]
-pub struct JwToken<S> {
+pub struct JwTokenService<S> {
     inner: S,
 }
 
-impl<S> JwToken<S> {
+impl<S> JwTokenService<S> {
     pub fn new(inner: S) -> Self {
         Self { inner }
     }
 }
 
-impl<S, B> Service<Request<B>> for JwToken<S>
+impl<S, B> Service<Request<B>> for JwTokenService<S>
 where
     S: Service<Request<B>>,
 {
@@ -67,9 +69,9 @@ where
 pub struct JwTokenLayer;
 
 impl<S> Layer<S> for JwTokenLayer {
-    type Service = JwToken<S>;
+    type Service = JwTokenService<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        JwToken { inner }
+        JwTokenService { inner }
     }
 }
