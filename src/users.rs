@@ -1,12 +1,15 @@
-use mysql_async::{prelude::{FromRow, Queryable}, Pool};
+use mysql_async::{
+    prelude::{FromRow, Queryable},
+    Conn, Pool,
+};
 use serde::Serialize;
 
 use crate::find_col_or_err;
 
 #[derive(Debug, Serialize)]
 pub struct User {
-   pub user_id: u64,
-   pub email: String,
+    pub user_id: u64,
+    pub email: String,
 }
 
 impl FromRow for User {
@@ -24,6 +27,13 @@ impl FromRow for User {
 }
 
 impl User {
+    pub fn new(email: &str) -> Self {
+        Self {
+            user_id: 0,
+            email: email.to_string(),
+        }
+    }
+
     pub async fn get_by_id(pool: Pool, user_id: u64) -> Result<Option<User>, mysql_async::Error> {
         let mut conn = pool.get_conn().await?;
 
@@ -39,5 +49,18 @@ impl User {
 
         let email: mysql_async::Value = email.into();
         conn.exec_first(stmt, vec![email]).await
+    }
+
+    pub async fn insert(self, conn: &mut Conn) -> Result<(), mysql_async::Error> {
+        let stmt = conn.prep("INSERT INTO users (email) VALUES (?);").await?;
+
+        let params: mysql_async::Params = self.into();
+        conn.exec_drop(stmt, params).await
+    }
+}
+
+impl Into<mysql_async::Params> for User {
+    fn into(self) -> mysql_async::Params {
+        mysql_async::Params::Positional(vec![self.email.into()])
     }
 }

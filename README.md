@@ -11,7 +11,7 @@ This is an implementation of a shared shopping list in rust.
 ```sql
 CREATE TABLE `families` (
   family_id SERIAL PRIMARY KEY,
-  `name` VARCHAR(255) NOT NULL
+  `family_name` VARCHAR(255) NOT NULL
 );
 ```
 

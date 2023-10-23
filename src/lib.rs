@@ -9,7 +9,7 @@ use tower::Service;
 pub mod auth;
 pub mod images;
 pub mod lists;
-pub mod user;
+pub mod users;
 pub mod families;
 pub struct AppState {
     pub origin: String,

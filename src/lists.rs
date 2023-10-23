@@ -2,18 +2,22 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, State},
+    middleware::Next,
     response::IntoResponse,
     routing::{delete, get, post},
-    Json, Router, Extension,
+    Extension, Json, Router,
 };
 use http::StatusCode;
 use mysql_async::Pool;
 use serde::Deserialize;
 use tower::ServiceBuilder;
 
-use crate::auth::{JwTokenReaderLayer, Claims, AuthGuardLayer};
+use crate::auth::{AuthGuardLayer, Claims, JwTokenReaderLayer};
 
-use self::model::{Item, List};
+use self::{
+    guard::ListGuardLayer,
+    model::{Item, List},
+};
 
 mod guard;
 mod model;
@@ -32,6 +36,7 @@ impl Into<Router> for ListRouter {
 
 impl ListRouter {
     pub fn new(pool: Pool) -> Self {
+        let state = ListState::new(pool);
         Self(
             Router::new()
                 .route("/", get(get_lists))
@@ -39,8 +44,13 @@ impl ListRouter {
                 .route("/:list_id/items", get(get_list_items))
                 .route("/:list_id/items", post(add_item))
                 .route("/:list_id/items/:item_id", delete(delete_item))
-                .layer(ServiceBuilder::new().layer(JwTokenReaderLayer).layer(AuthGuardLayer))
-                .with_state(ListState::new(pool)),
+                .route_layer(ListGuardLayer)
+                .layer(
+                    ServiceBuilder::new()
+                        .layer(JwTokenReaderLayer)
+                        .layer(AuthGuardLayer),
+                )
+                .with_state(state),
         )
     }
 }
@@ -51,7 +61,10 @@ impl ListState {
     }
 }
 
-async fn get_lists(State(state): State<Arc<ListState>>, Extension(user): Extension<Claims>) -> Result<impl IntoResponse, StatusCode> {
+async fn get_lists(
+    State(state): State<Arc<ListState>>,
+    Extension(user): Extension<Claims>,
+) -> Result<impl IntoResponse, StatusCode> {
     let lists = List::paginate(state.pool.clone(), user.sub)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
