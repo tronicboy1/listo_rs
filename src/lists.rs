@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, State},
-    middleware::Next,
     response::IntoResponse,
     routing::{delete, get, post},
     Extension, Json, Router,
@@ -44,7 +43,7 @@ impl ListRouter {
                 .route("/:list_id/items", get(get_list_items))
                 .route("/:list_id/items", post(add_item))
                 .route("/:list_id/items/:item_id", delete(delete_item))
-                .route_layer(ListGuardLayer)
+                .route_layer(ListGuardLayer::new(state.pool.clone()))
                 .layer(
                     ServiceBuilder::new()
                         .layer(JwTokenReaderLayer)
@@ -76,7 +75,13 @@ async fn get_list(
     State(state): State<Arc<ListState>>,
     Path(list_id): Path<u64>,
 ) -> Result<axum::response::Response, StatusCode> {
-    let result = List::get(state.pool.clone(), list_id)
+    let conn = state
+        .pool
+        .get_conn()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let result = List::get(conn, list_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -90,7 +95,13 @@ async fn get_list_items(
     State(state): State<Arc<ListState>>,
     Path(list_id): Path<u64>,
 ) -> Result<axum::response::Response, StatusCode> {
-    let result = List::get(state.pool.clone(), list_id)
+    let conn = state
+        .pool
+        .get_conn()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let result = List::get(conn, list_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 

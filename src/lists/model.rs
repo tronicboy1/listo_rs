@@ -1,6 +1,6 @@
 use mysql_async::{
     prelude::{FromRow, Queryable},
-    Params, Pool, Value,
+    Conn, Params, Pool, Value,
 };
 use serde::Serialize;
 
@@ -17,10 +17,14 @@ impl List {
     pub async fn paginate(pool: Pool, user_id: u64) -> Result<Vec<List>, mysql_async::Error> {
         let mut conn = pool.get_conn().await?;
 
-        let stmt = conn.prep("SELECT * FROM lists
+        let stmt = conn
+            .prep(
+                "SELECT * FROM lists
         INNER JOIN users_families ON lists.family_id = users_families.family_id
         WHERE users_families.user_id = ?
-        LIMIT 10;").await?;
+        LIMIT 10;",
+            )
+            .await?;
 
         let lists: Vec<Self> = conn.exec(stmt, vec![user_id]).await?;
         let len = lists.len();
@@ -40,9 +44,7 @@ impl List {
         Ok(lists)
     }
 
-    pub async fn get(pool: Pool, list_id: u64) -> Result<Option<Self>, mysql_async::Error> {
-        let mut conn = pool.get_conn().await?;
-
+    pub async fn get(mut conn: Conn, list_id: u64) -> Result<Option<Self>, mysql_async::Error> {
         let stmt = conn.prep("SELECT * FROM lists WHERE list_id = ?").await?;
 
         conn.exec_first(stmt, vec![list_id]).await
@@ -54,6 +56,15 @@ impl List {
         self.items = Some(items);
 
         Ok(self)
+    }
+
+    /// Checks the ownership of a list to ensure that the user provided has access priveleges
+    pub async fn check_ownership(
+        mut conn: Conn,
+        list_id: u64,
+        user_id: u64,
+    ) -> Result<bool, mysql_async::Error> {
+        todo!("implement ownership chek")
     }
 }
 
