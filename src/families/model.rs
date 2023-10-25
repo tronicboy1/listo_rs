@@ -1,9 +1,11 @@
 use mysql_async::{prelude::*, Conn, Params};
+use serde::Serialize;
 
 use crate::{find_col_or_err, users::User};
 
 /// A group (family) of users that have access to lists
 /// A family object owns lists, and multiple users belong to a family.
+#[derive(Debug, Serialize)]
 pub struct Family {
     pub family_id: u64,
     pub family_name: String,
@@ -96,30 +98,9 @@ impl FromRow for Family {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        sync::Arc,
-        time::{SystemTime, UNIX_EPOCH},
-    };
-
-    use crate::test_utils::TestState;
+    use crate::test_utils::create_family;
 
     use super::*;
-
-    async fn create_family() -> (Arc<TestState>, u64) {
-        let state = TestState::new();
-
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis()
-            .to_string();
-        let f = Family::new(format!("New Test Family: {}", now));
-
-        let conn = state.pool.get_conn().await.unwrap();
-        let id = f.insert(conn).await.unwrap();
-
-        (state, id)
-    }
 
     #[tokio::test]
     async fn can_create_family() {

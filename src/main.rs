@@ -1,13 +1,14 @@
 use std::net::SocketAddr;
 
 use axum::{response::AppendHeaders, routing::get, Router};
-use listo_rs::{auth::AuthRouter, images::ImagesRouter, lists::ListRouter, AppState};
+use listo_rs::{
+    auth::AuthRouter, families::FamilyRouter, images::ImagesRouter, lists::ListRouter, AppState,
+};
 
 #[tokio::main]
 async fn main() {
     let state = AppState::new();
 
-    let pool = state.pool.clone();
     // build our application with a single route
     let app = Router::new()
         .route(
@@ -23,10 +24,11 @@ async fn main() {
                 )
             }),
         )
-        .with_state(state)
+        .with_state(state.clone())
         .nest("/auth", AuthRouter::new().into())
         .nest("/images", ImagesRouter::new().into())
-        .nest("/lists", ListRouter::new(pool).into());
+        .nest("/lists", ListRouter::new(state.pool.clone()).into())
+        .nest("/families", FamilyRouter::new(state.pool.clone()).into());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
