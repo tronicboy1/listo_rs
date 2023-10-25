@@ -4,7 +4,7 @@ use mysql_async::{
 };
 use serde::Serialize;
 
-use crate::{find_col, find_col_or_err};
+use crate::find_col_or_err;
 
 #[derive(Serialize)]
 pub struct List {
@@ -85,12 +85,8 @@ impl FromRow for List {
         Self: Sized,
     {
         let list = Self {
-            list_id: find_col(&mut row, "list_id")
-                .expect("list id not included in query")
-                .map_err(|_| mysql_async::FromRowError(row.clone()))?,
-            name: find_col(&mut row, "name")
-                .expect("name not included in query")
-                .map_err(|_| mysql_async::FromRowError(row.clone()))?,
+            list_id: find_col_or_err!(row, "list_id")?,
+            name: find_col_or_err!(row, "name")?,
             items: None,
         };
 
@@ -112,18 +108,10 @@ impl FromRow for Item {
         Self: Sized,
     {
         Ok(Self {
-            item_id: find_col(&mut row, "item_id")
-                .expect("item id not included in query")
-                .map_err(|_| mysql_async::FromRowError(row.clone()))?,
-            list_id: find_col(&mut row, "list_id")
-                .expect("list id not included in query")
-                .map_err(|_| mysql_async::FromRowError(row.clone()))?,
-            name: find_col(&mut row, "name")
-                .expect("name not included in query")
-                .map_err(|_| mysql_async::FromRowError(row.clone()))?,
-            amount: find_col(&mut row, "amount")
-                .expect("amount not included in query")
-                .map_err(|_| mysql_async::FromRowError(row.clone()))?,
+            item_id: find_col_or_err!(row, "item_id")?,
+            list_id: find_col_or_err!(row, "list_id")?,
+            name: find_col_or_err!(row, "name")?,
+            amount: find_col_or_err!(row, "amount")?,
         })
     }
 }
@@ -198,26 +186,5 @@ impl Into<mysql_async::Params> for Item {
             Value::from(name),
             Value::from(amount),
         ])
-    }
-}
-
-/// A group (family) of users that have access to lists
-/// A family object owns lists, and multiple users belong to a family.
-struct Family {
-    family_id: u64,
-    name: String,
-}
-
-impl FromRow for Family {
-    fn from_row_opt(mut row: mysql_async::Row) -> Result<Self, mysql_async::FromRowError>
-    where
-        Self: Sized,
-    {
-        let family = Family {
-            family_id: find_col_or_err!(row, "family_id")?,
-            name: find_col_or_err!(row, "name")?,
-        };
-
-        Ok(family)
     }
 }

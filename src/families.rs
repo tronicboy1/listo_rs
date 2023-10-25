@@ -2,6 +2,8 @@ use axum::Router;
 
 use crate::auth::JwTokenReaderLayer;
 
+mod model;
+
 pub struct FamilyRouter(Router);
 
 impl FamilyRouter {
