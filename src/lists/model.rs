@@ -64,7 +64,18 @@ impl List {
         list_id: u64,
         user_id: u64,
     ) -> Result<bool, mysql_async::Error> {
-        todo!("implement ownership chek")
+        let stmt = conn
+            .prep(
+                "SELECT * FROM lists
+                INNER JOIN users_families ON lists.family_id = users_families.family_id
+                WHERE list_id = ? AND user_id = ?;",
+            )
+            .await?;
+
+        let params = mysql_async::Params::Positional(vec![list_id.into(), user_id.into()]);
+        let res: Option<List> = conn.exec_first(stmt, params).await?;
+
+        Ok(res.is_some())
     }
 }
 
