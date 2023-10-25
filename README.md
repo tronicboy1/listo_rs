@@ -22,7 +22,7 @@ CREATE TABLE `lists` (
   list_id SERIAL PRIMARY KEY,
   family_id BIGINT UNSIGNED NOT NULL,
   `name` VARCHAR(255) NOT NULL DEFAULT '',
-  FOREIGN KEY (`family_id`) REFERENCES `families`(family_id)
+  FOREIGN KEY (`family_id`) REFERENCES `families`(family_id) ON DELETE CASCADE
 );
 ```
 
@@ -34,7 +34,7 @@ CREATE TABLE list_items (
   list_id BIGINT UNSIGNED NOT NULL,
   `name` VARCHAR(255) NOT NULL DEFAULT '',
   amount INT NOT NULL DEFAULT 1,
-  FOREIGN KEY (list_id) REFERENCES lists(list_id),
+  FOREIGN KEY (list_id) REFERENCES lists(list_id) ON DELETE CASCADE,
   CONSTRAINT same_item_per_list UNIQUE (list_id, `name`)
 );
 ```
@@ -56,8 +56,8 @@ CREATE TABLE users_families (
   user_family_id SERIAL PRIMARY KEY,
   user_id BIGINT UNSIGNED NOT NULL,
   family_id BIGINT UNSIGNED NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES users(user_id),
-  FOREIGN KEY (family_id) REFERENCES families(family_id),
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (family_id) REFERENCES families(family_id) ON DELETE CASCADE,
   CONSTRAINT no_same_user_in_family UNIQUE (user_id, family_id)
 );
 ```
