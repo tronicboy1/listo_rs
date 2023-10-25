@@ -55,8 +55,6 @@ pub struct Claims {
 async fn create_user(
     Json(NewUser { username }): Json<NewUser>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    println!("{}", username);
-
     let claim = Claims {
         sub: 1,
         exp: 1000000000000,

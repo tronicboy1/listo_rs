@@ -61,7 +61,7 @@ impl Family {
         user_id: u64,
     ) -> Result<(), mysql_async::Error> {
         let stmt = conn
-            .prep("DELETE FROM users_families WHERE user_id = ? AND family_id = ?;")
+            .prep("DELETE FROM users_families WHERE family_id = ? AND user_id = ?;")
             .await?;
 
         let params = Params::Positional(vec![family_id.into(), user_id.into()]);
@@ -130,6 +130,11 @@ mod tests {
 
         let conn = state.pool.get_conn().await.unwrap();
         Family::remove_member(conn, family_id, 1).await.unwrap();
+
+        let conn = state.pool.get_conn().await.unwrap();
+        let users = Family::members(conn, family_id).await.unwrap();
+
+        assert!(users.iter().find(|user| user.user_id == 1).is_none());
 
         let conn = state.pool.get_conn().await.unwrap();
         Family::destroy(conn, family_id).await.unwrap();
