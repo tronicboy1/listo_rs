@@ -119,3 +119,18 @@ macro_rules! find_col_or_err {
             .map_err(|_| mysql_async::FromRowError($row.clone()))
     }};
 }
+
+/// Gets a connection from a pool and maps the error to internal server error status code
+/// # Example
+/// ```rust,ignore
+/// let conn = get_conn!(pool)?;
+/// ````
+#[macro_export]
+macro_rules! get_conn {
+    ($pool: ident) => {{
+        $pool
+            .get_conn()
+            .await
+            .map_err(|_| http::StatusCode::INTERNAL_SERVER_ERROR)
+    }};
+}

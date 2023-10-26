@@ -80,6 +80,25 @@ impl Family {
         let params = Params::Positional(vec![family_id.into()]);
         conn.exec(stmt, params).await
     }
+
+    pub async fn is_member(
+        mut conn: Conn,
+        family_id: u64,
+        user_id: u64,
+    ) -> Result<bool, mysql_async::Error> {
+        let stmt = conn
+            .prep(
+                "SELECT * FROM families
+            INNER JOIN users_families ON families.family_id = users_families.family_id
+            WHERE families.family_id = ? AND user_id = ?;",
+            )
+            .await?;
+
+        let params = Params::Positional(vec![family_id.into(), user_id.into()]);
+        let res: Option<Family> = conn.exec_first(stmt, params).await?;
+
+        Ok(res.is_some())
+    }
 }
 
 impl FromRow for Family {
@@ -151,6 +170,22 @@ mod tests {
         let users = Family::members(conn, family_id).await.unwrap();
 
         assert!(users.iter().find(|user| user.user_id == 1).is_some());
+
+        let conn = state.pool.get_conn().await.unwrap();
+        Family::destroy(conn, family_id).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn confirm_user_is_member() {
+        let (state, family_id) = create_family().await;
+
+        let conn = state.pool.get_conn().await.unwrap();
+        Family::add_member(conn, family_id, 1).await.unwrap();
+
+        let conn = state.pool.get_conn().await.unwrap();
+        let is_member = Family::is_member(conn, family_id, 1).await.unwrap();
+
+        assert!(is_member);
 
         let conn = state.pool.get_conn().await.unwrap();
         Family::destroy(conn, family_id).await.unwrap();
