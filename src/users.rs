@@ -34,9 +34,7 @@ impl User {
         }
     }
 
-    pub async fn get_by_id(pool: Pool, user_id: u64) -> Result<Option<User>, mysql_async::Error> {
-        let mut conn = pool.get_conn().await?;
-
+    pub async fn get_by_id(mut conn: Conn, user_id: u64) -> Result<Option<User>, mysql_async::Error> {
         let stmt = conn.prep("SELECT * FROM users WHERE user_id = ?").await?;
 
         conn.exec_first(stmt, vec![user_id]).await
