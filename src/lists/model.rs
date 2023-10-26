@@ -10,10 +10,32 @@ use crate::find_col_or_err;
 pub struct List {
     pub list_id: u64,
     pub name: String,
+    pub family_id: u64,
     pub items: Option<Vec<Item>>,
 }
 
 impl List {
+    pub fn new(name: String, family_id: u64) -> Self {
+        Self {
+            list_id: 0,
+            name,
+            items: None,
+            family_id,
+        }
+    }
+
+    pub async fn insert(self, mut conn: Conn) -> Result<u64, mysql_async::Error> {
+        let stmt = conn.prep("INSERT INTO lists (`name`, family_id) VALUES (?, ?);").await?;
+
+        let params = Params::Positional(vec![self.name.into(), self.family_id.into()]);
+        conn.exec_drop(stmt, params).await?;
+
+        Ok(conn
+            .exec_first("SELECT LAST_INSERT_ID();", ())
+            .await?
+            .expect("mysql guarantees id returned"))
+    }
+
     pub async fn paginate(pool: Pool, user_id: u64) -> Result<Vec<List>, mysql_async::Error> {
         let mut conn = pool.get_conn().await?;
 
@@ -87,6 +109,7 @@ impl FromRow for List {
         let list = Self {
             list_id: find_col_or_err!(row, "list_id")?,
             name: find_col_or_err!(row, "name")?,
+            family_id: find_col_or_err!(row, "family_id")?,
             items: None,
         };
 
@@ -186,5 +209,39 @@ impl Into<mysql_async::Params> for Item {
             Value::from(name),
             Value::from(amount),
         ])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    use crate::{families::Family, test_utils::create_family};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn can_create_list() {
+        let (state, family_id) = create_family().await;
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis()
+            .to_string();
+        let list_name = String::from("My new test list: ") + &now;
+        let list = List::new(list_name.clone(), family_id);
+
+        let conn = state.pool.get_conn().await.unwrap();
+        let list_id = list.insert(conn).await.unwrap();
+
+        let conn = state.pool.get_conn().await.unwrap();
+        let list = List::get(conn, list_id).await.unwrap().unwrap();
+
+        assert_eq!(list.name, list_name);
+
+        let conn = state.pool.get_conn().await.unwrap();
+        Family::destroy(conn, family_id).await.unwrap();
     }
 }
