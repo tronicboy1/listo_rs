@@ -11,7 +11,10 @@ use mysql_async::Pool;
 use serde::Deserialize;
 use tower::ServiceBuilder;
 
-use crate::auth::{AuthGuardLayer, Claims, JwTokenReaderLayer};
+use crate::{
+    auth::{AuthGuardLayer, Claims, JwTokenReaderLayer},
+    get_conn,
+};
 
 use self::{
     guard::ListGuardLayer,
@@ -39,6 +42,7 @@ impl ListRouter {
         Self(
             Router::new()
                 .route("/", get(get_lists))
+                .route("/", post(add_list))
                 .route("/:list_id", get(get_list))
                 .route("/:list_id/items", get(get_list_items))
                 .route("/:list_id/items", post(add_item))
@@ -89,6 +93,25 @@ async fn get_list(
         Some(list) => Json(list).into_response(),
         None => StatusCode::NOT_FOUND.into_response(),
     })
+}
+
+#[derive(Debug, Deserialize)]
+struct NewListBody {
+    name: String,
+    family_id: u64,
+}
+async fn add_list(
+    State(state): State<Arc<ListState>>,
+    Json(NewListBody { name, family_id }): Json<NewListBody>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let ref pool = state.pool;
+    let conn = get_conn!(pool)?;
+
+    let list = List::new(name, family_id);
+    list.insert(conn)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        .map(|list_id| Json(list_id))
 }
 
 async fn get_list_items(
