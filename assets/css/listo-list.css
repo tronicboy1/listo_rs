@@ -1,0 +1,75 @@
+.add-item-form {
+  display: flex;
+  flex-direction: row;
+  margin-top: 1rem;
+}
+
+.add-item-form input {
+  height: 50px;
+  border: 1px solid var(--secondary-color);
+  border-right: none;
+  border-radius: 4px 0 0 4px;
+  font-size: 1.2rem;
+  padding-left: 0.25rem;
+  outline: none;
+  margin: 0;
+  width: 100%;
+  min-width: 50px;
+}
+.add-item-form button {
+  border-radius: 0 4px 4px 0;
+  border-left: none;
+  flex: 0 0 20%;
+  height: 50px;
+}
+
+.add-item-form:invalid button {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+}
+
+button {
+  border: 1px solid var(--highlight-color);
+  background-color: var(--highlight-color);
+  border-radius: 4px;
+  color: white;
+  height: 40px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  margin: 0;
+  transition: all 0.3s;
+}
+
+#clear {
+  height: 54px;
+  border-radius: 8px;
+}
+
+svg {
+  width: auto;
+  height: 100%;
+  fill: white;
+}
+
+.title {
+  display: inline-block;
+  position: sticky;
+  top: 0;
+  padding: 1rem 0 1rem 0;
+  margin: 0;
+  background-color: var(--primary-color);
+}
+
+.deleting {
+  color: grey !important;
+  background-color: lightgray !important;
+  border-color: lightgray !important;
+}
+
+.card {
+  padding-top: 0;
+  position: relative;
+}
+:host([hide-list]) .card {
+  padding: 0 1rem 0 1rem;
+}

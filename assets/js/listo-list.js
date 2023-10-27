@@ -1,20 +1,18 @@
 //@ts-check
-import {LitElement, html} from "lit";
+import {LitElement, css, html} from "lit";
+import {Subject, mergeMap, takeUntil, tap} from "rxjs";
+import {filterForDoubleClick} from "@tronicboy/rxjs-operators";
 
 export const tagName = "listo-list";
 
 export class ListoList extends LitElement {
   static properties = {
-    _items: {state: true},
+    //@ts-ignore
+    _items: {type: Array, attribute: "list-items", converter: text => JSON.parse(text)},
     listId: {type: Number, attribute: "list-id"},
+    _loading: {state: true},
+    _deletingIds: {state: true},
   };
-
-  // _first_render;
-
-  // _items;
-  // listId;
-  // form;
-  // _loading;
 
   constructor() {
     super();
@@ -23,13 +21,43 @@ export class ListoList extends LitElement {
     this.listId = 0;
     this.form = /** @type {HTMLFormElement} */ (this.shadowRoot?.querySelector("form"));
     this._loading = false;
+    this._deletingIds = new Set();
     this._first_render = true;
+    /** @type {Subject<number>} */
+    this._deleteClick = new Subject();
+    /** @type {Subject<void>} */
+    this._teardown = new Subject();
   }
 
   connectedCallback() {
     super.connectedCallback();
 
     this.form.addEventListener("submit", this.handleFormSubmit);
+
+    this._deleteClick
+      .pipe(
+        filterForDoubleClick(200),
+        takeUntil(this._teardown),
+        tap(id => {
+          this._loading = true;
+          this._deletingIds.add(id);
+        }),
+        mergeMap(itemId =>
+          fetch(`/api/v1/lists/${this.listId}/items/${itemId}`, {method: "DELETE"}).finally(() => {
+            this._deletingIds.delete(itemId);
+          })
+        ),
+        mergeMap(() => this.refreshList()),
+        tap(() => {
+          this._loading = false;
+        })
+      )
+      .subscribe();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this._teardown.next();
   }
 
   createRenderRoot() {
@@ -51,7 +79,6 @@ export class ListoList extends LitElement {
 
     const formData = new FormData(this.form);
     let name = String(formData.get("name"));
-    console.log(name);
 
     this._loading = true;
     fetch(`/api/v1/lists/${this.listId}/items`, {
@@ -77,17 +104,22 @@ export class ListoList extends LitElement {
   }
 
   render() {
-    if (this._items.length === 0) {
-      return html``;
-    }
-
     if (this._first_render && this.renderRoot instanceof HTMLElement) {
       this.renderRoot.innerHTML = "";
-      super.connectedCallback();
       this._first_render = false;
     }
 
-    return html`${this._items.map(item => html`<li>${item.name}</li>`)}`;
+    console.log(this._deletingIds);
+
+    return html`${this._items.map(
+      item => html` ${this._loading ? html`` : ""}
+        <li
+          class=${`item ${this._deletingIds.has(item.item_id) ? "deleting" : ""}`}
+          @click=${() => this._deleteClick.next(item.item_id)}
+        >
+          ${item.name}
+        </li>`
+    )}`;
   }
 }
 

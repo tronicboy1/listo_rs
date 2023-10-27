@@ -1,0 +1,145 @@
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
+    "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: white;
+  margin: 0 0 12vh 0;
+}
+
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #232323;
+  }
+}
+
+.card {
+  width: 95%;
+  max-width: 500px;
+  margin: 1rem auto;
+  background-color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.168);
+  padding: 1rem;
+  display: flex;
+  opacity: 1;
+  flex-direction: column;
+  transition: all 0.3s;
+}
+
+.card[hide] {
+  display: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  position: relative;
+  align-items: center;
+  border: 1px var(--secondary-color) solid;
+  background: var(--secondary-color);
+  border-radius: 8px;
+  color: black;
+  padding: 1.25rem 0.5rem;
+  transition: all 0.2s;
+  margin-bottom: 0.5rem;
+  text-align: center;
+  font-size: 1.8rem;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.item span {
+  word-wrap: break-word;
+}
+
+.item div + span {
+  width: 60%;
+  margin: 0 auto;
+}
+
+.item[priority] {
+  background-color: var(--danger-color);
+  border-color: var(--danger-color);
+}
+
+.item small {
+  font-size: 1rem;
+  margin-left: 0.5rem;
+}
+
+.item:hover {
+  cursor: pointer;
+}
+
+.item:last-child {
+  margin-bottom: 0;
+}
+
+.deleting {
+  color: grey !important;
+  background-color: lightgray !important;
+  border-color: lightgray !important;
+}
+
+listo-list ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 1rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.list-of-lists {
+  display: flex;
+  flex-direction: column;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.title + #contents {
+  margin-top: 1rem;
+}
+
+.title {
+  width: 100%;
+  display: block;
+  position: relative;
+  border-bottom: 1px solid var(--secondary-color);
+  user-select: none;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.title h3 {
+  text-align: center;
+  margin: 0;
+}
+
+.title span {
+  display: inline-flex;
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  top: 0;
+  margin: auto 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background-color: var(--secondary-color);
+  padding: 0 0.35rem;
+  border-radius: 60%;
+  transition: opacity 0.3s;
+}

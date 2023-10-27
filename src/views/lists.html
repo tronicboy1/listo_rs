@@ -1,21 +1,29 @@
 {% extends "base.html" %} {% block content %}
-<ul>
+<ul class="list-of-lists">
   {% for list in lists %}
   <li>
-    <listo-list list-id="{{ list.list_id }}">
-      <h3 slot="list-name">{{ list.name }}</h3>
+    <listo-list class="card" list-id="{{ list.list_id }}" list-items="{{ list.items | json_encode }}">
+      <div slot="list-name" class="title">
+        <h3>{{ list.name }}</h3>
+      </div>
       <ul>
         {% for item in list.items %}
-        <li>{{ item.name }}</li>
+        <li class="item">{{ item.name }}</li>
         {% endfor %}
       </ul>
       <template shadowrootmode="open">
+        <link rel="stylesheet" href="/assets/css/listo-list.css" />
+        <link rel="stylesheet" href="/assets/css/variables.css" />
         <slot name="list-name"></slot>
-        <slot></slot>
-        <form>
-          <label for="name">Add Item</label>
-          <input type="text" name="name" id="name" />
+        <form autocomplete="off" class="add-item-form">
+          <input type="text" name="name" id="name" minlength="1" maxlength="33" required />
+          <button id="add" type="submit">
+            <svg xmlns="http://www.w3.org/2000/svg" height="48" width="48" viewBox="0, 0, 48, 48">
+              <path d="M22.5 38V25.5H10V22.5H22.5V10H25.5V22.5H38V25.5H25.5V38Z" />
+            </svg>
+          </button>
         </form>
+        <slot></slot>
       </template>
     </listo-list>
   </li>

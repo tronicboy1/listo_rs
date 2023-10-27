@@ -1,0 +1,30 @@
+* {
+  box-sizing: border-box;
+  --primary-color: white;
+  --secondary-color: rgb(218, 218, 218);
+  --highlight-color: rgb(0, 140, 255);
+  --highlight-hover: rgb(26, 152, 255);
+  --danger-color: rgb(255, 94, 94);
+  --warning-color: rgb(255, 250, 211);
+}
+
+@media (prefers-color-scheme: light) {
+  * {
+    --primary-color: white;
+    --secondary-color: rgb(218, 218, 218);
+    --highlight-color: rgb(0, 140, 255);
+    --highlight-hover: rgb(26, 152, 255);
+    color: black;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  * {
+    --primary-color: rgb(85, 85, 85);
+    --secondary-color: rgb(132, 132, 132);
+    --highlight-color: rgb(0, 140, 255);
+    --highlight-hover: rgb(26, 152, 255);
+    --warning-color: rgb(105, 95, 23);
+    color: white;
+  }
+}

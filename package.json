@@ -6,6 +6,8 @@
   "author": "Austin John Mayer (井上 オースティン) <mayeraus41@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "lit": "^3.0.0"
+    "@tronicboy/rxjs-operators": "^0.0.3",
+    "lit": "^3.0.0",
+    "rxjs": "^7.8.1"
   }
 }
