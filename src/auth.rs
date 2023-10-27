@@ -12,6 +12,7 @@ use http::header::SET_COOKIE;
 use jsonwebtoken::{encode, EncodingKey};
 use mysql_async::Pool;
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 pub struct AuthRouter(Router);
 
 mod token_guard;
@@ -75,19 +76,42 @@ impl Claims {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 struct UserBody {
+    #[validate(length(min = 8))]
     password: String,
+    #[validate(email)]
     email: String,
+}
+
+impl TryFrom<UserBody> for User {
+    type Error = argon2::password_hash::Error;
+
+    fn try_from(value: UserBody) -> Result<Self, Self::Error> {
+        User::new(value.email, value.password)
+    }
 }
 
 async fn create_user(
     State(AuthState { pool }): State<AuthState>,
-    Json(UserBody { email, password }): Json<UserBody>,
-) -> Result<impl IntoResponse, StatusCode> {
-    let user = User::new(email, password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Json(user_body): Json<UserBody>,
+) -> Result<axum::response::Response, StatusCode> {
+    let is_valid = user_body.validate().is_ok();
+    if !is_valid {
+        return Ok(StatusCode::BAD_REQUEST.into_response());
+    }
 
     let mut conn = get_conn!(pool)?;
+    let user_exists = User::get_by_email(&mut conn, &user_body.email)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if user_exists.is_some() {
+        return Ok(StatusCode::BAD_REQUEST.into_response());
+    }
+
+    let user = User::try_from(user_body).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     let user_id = user
         .insert(&mut conn)
         .await
@@ -104,7 +128,8 @@ async fn create_user(
     Ok((
         StatusCode::CREATED,
         AppendHeaders([(SET_COOKIE, cookie.to_string())]),
-    ))
+    )
+        .into_response())
 }
 
 async fn login(
@@ -143,4 +168,38 @@ async fn login(
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use validator::Validate;
+
+    use super::UserBody;
+
+    #[test]
+    fn invalid_email() {
+        let email = String::from("not-email");
+        let password = String::from("password");
+
+        let body = UserBody { password, email };
+
+        assert!(body.validate().is_err());
+    }
+
+    #[test]
+    fn invalid_password() {
+        let email = String::from("email@mail.co");
+        let password = String::from("pass");
+
+        let body = UserBody { password, email };
+
+        assert!(body.validate().is_err());
+    }
+
+    #[test]
+    fn valid_body() {
+        let email = String::from("email@mail.co");
+        let password = String::from("password123");
+
+        let body = UserBody { password, email };
+
+        assert!(body.validate().is_ok());
+    }
+}
