@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use axum::{response::AppendHeaders, routing::get, Router};
+use axum::{response::Html, routing::get, Router};
 use listo_rs::{
     auth::AuthRouter, families::FamilyRouter, images::ImagesRouter, lists::ListRouter, AppState,
 };
@@ -18,17 +18,17 @@ async fn main() {
                     .await
                     .unwrap();
 
-                (
-                    AppendHeaders([("Content-Type", "text/html; charset=utf-8")]),
-                    template,
-                )
+                Html(template)
             }),
         )
         .with_state(state.clone())
-        .nest("/auth", AuthRouter::new(state.pool.clone()).into())
+        .nest("/api/v1/auth", AuthRouter::new(state.pool.clone()).into())
         .nest("/images", ImagesRouter::new().into())
-        .nest("/lists", ListRouter::new(state.pool.clone()).into())
-        .nest("/families", FamilyRouter::new(state.pool.clone()).into());
+        .nest("/api/v1/lists", ListRouter::new(state.pool.clone()).into())
+        .nest(
+            "/api/v1/families",
+            FamilyRouter::new(state.pool.clone()).into(),
+        );
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 

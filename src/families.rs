@@ -147,8 +147,8 @@ async fn remove_member(
     State(FamilyRouterState { pool }): State<FamilyRouterState>,
     Path((family_id, user_id)): Path<(u64, u64)>,
 ) -> Result<axum::response::Response, StatusCode> {
-    let conn = get_conn!(pool)?;
-    let user_exists = User::get_by_id(conn, user_id)
+    let mut conn = get_conn!(pool)?;
+    let user_exists = User::get_by_id(&mut conn, user_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .is_some();
@@ -157,7 +157,6 @@ async fn remove_member(
         return Ok(StatusCode::BAD_REQUEST.into_response());
     }
 
-    let mut conn = get_conn!(pool)?;
     let is_member = Family::is_member(&mut conn, family_id, user_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

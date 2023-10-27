@@ -1,8 +1,7 @@
 const SECRET_KEY: &'static [u8] = b"my-secret";
 
-use std::sync::Arc;
-
 use axum::{
+    extract::State,
     http::StatusCode,
     response::{AppendHeaders, IntoResponse},
     routing::post,
@@ -11,26 +10,35 @@ use axum::{
 use cookie::Cookie;
 use http::header::SET_COOKIE;
 use jsonwebtoken::{encode, EncodingKey};
+use mysql_async::Pool;
 use serde::{Deserialize, Serialize};
 pub struct AuthRouter(Router);
 
-mod token_reader;
 mod token_guard;
+mod token_reader;
 
-pub use token_reader::JwTokenReaderLayer;
 pub use token_guard::AuthGuardLayer;
+pub use token_reader::JwTokenReaderLayer;
 
-struct AuthState {}
+use crate::{get_conn, users::User};
+
+#[derive(Debug, Clone)]
+struct AuthState {
+    pool: Pool,
+}
 
 impl AuthState {
-    fn new() -> Arc<Self> {
-        Arc::new(Self {})
+    fn new(pool: Pool) -> Self {
+        Self { pool }
     }
 }
 
 impl AuthRouter {
-    pub fn new() -> Self {
-        Self(Router::new().route("/register", post(create_user).with_state(AuthState::new())))
+    pub fn new(pool: Pool) -> Self {
+        Self(Router::new().route(
+            "/register",
+            post(create_user).with_state(AuthState::new(pool)),
+        ))
     }
 }
 
@@ -40,11 +48,6 @@ impl Into<Router> for AuthRouter {
     }
 }
 
-#[derive(Deserialize)]
-struct NewUser {
-    username: String,
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
     pub sub: u64,
@@ -52,11 +55,26 @@ pub struct Claims {
     iss: String,
 }
 
+#[derive(Deserialize)]
+struct NewUser {
+    password: String,
+    email: String,
+}
+
 async fn create_user(
-    Json(NewUser { username }): Json<NewUser>,
+    State(AuthState { pool }): State<AuthState>,
+    Json(NewUser { email, password }): Json<NewUser>,
 ) -> Result<impl IntoResponse, StatusCode> {
+    let user = User::new(email, password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let mut conn = get_conn!(pool)?;
+    let user_id = user
+        .insert(&mut conn)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     let claim = Claims {
-        sub: 1,
+        sub: user_id,
         exp: 1000000000000,
         iss: String::from("listo_rs"),
     };
@@ -76,3 +94,6 @@ async fn create_user(
         Json(42),
     ))
 }
+
+#[cfg(test)]
+mod tests {}

@@ -14,8 +14,6 @@ pub mod lists;
 pub(crate) mod test_utils;
 pub mod users;
 
-extern crate argon2;
-
 pub struct AppState {
     pub origin: String,
     pub pool: mysql_async::Pool,
