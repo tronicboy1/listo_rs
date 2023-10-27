@@ -7,9 +7,11 @@
         <h3>{{ list.name }}</h3>
       </div>
       <ul>
-        {% for item in list.items %}
+        {% if list.items | length < 1 %}
+        <button type="button" class="delete">Delete List</button>
+        {% else %} {% for item in list.items %}
         <li class="item">{{ item.name }}</li>
-        {% endfor %}
+        {% endfor %} {%endif%}
       </ul>
       <template shadowrootmode="open">
         <link rel="stylesheet" href="/assets/css/listo-list.css" />

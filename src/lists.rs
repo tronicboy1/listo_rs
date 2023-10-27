@@ -45,6 +45,7 @@ impl ListRouter {
                 .route("/", get(get_lists))
                 .route("/", post(add_list))
                 .route("/:list_id", get(get_list))
+                .route("/:list_id", delete(destroy_list))
                 .route("/:list_id/items", get(get_list_items))
                 .route("/:list_id/items", post(add_item))
                 .route("/:list_id/items/:item_id", delete(delete_item))
@@ -90,6 +91,27 @@ async fn get_list(
         Some(list) => Json(list).into_response(),
         None => StatusCode::NOT_FOUND.into_response(),
     })
+}
+
+async fn destroy_list(
+    State(state): State<Arc<ListState>>,
+    Path(list_id): Path<u64>,
+) -> Result<axum::response::Response, StatusCode> {
+    let mut conn = get_conn!(state.pool)?;
+
+    let result = List::get(&mut conn, list_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if result.is_none() {
+        return Ok(StatusCode::NOT_FOUND.into_response());
+    }
+
+    List::destroy(&mut conn, list_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(StatusCode::OK.into_response())
 }
 
 #[derive(Debug, Deserialize)]

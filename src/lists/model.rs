@@ -102,6 +102,13 @@ impl List {
 
         Ok(res.is_some())
     }
+
+    pub async fn destroy(conn: &mut Conn, list_id: u64) -> Result<(), mysql_async::Error> {
+        let stmt = conn.prep("DELETE FROM lists WHERE list_id = ?").await?;
+
+        let params = Params::Positional(vec![list_id.into()]);
+        conn.exec_drop(stmt, params).await
+    }
 }
 
 impl FromRow for List {
@@ -237,6 +244,29 @@ mod tests {
         let list = List::get(&mut conn, list_id).await.unwrap().unwrap();
 
         assert_eq!(list.name, list_name);
+
+        Family::destroy(&mut conn, family_id).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn can_destroy_list() {
+        let (state, family_id) = create_family().await;
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_millis()
+            .to_string();
+        let list_name = String::from("My new test list: ") + &now;
+        let list = List::new(list_name.clone(), family_id);
+
+        let mut conn = state.pool.get_conn().await.unwrap();
+        let list_id = list.insert(&mut conn).await.unwrap();
+
+        List::destroy(&mut conn, list_id).await.unwrap();
+
+        let list = List::get(&mut conn, list_id).await.unwrap();
+        assert!(list.is_none());
 
         Family::destroy(&mut conn, family_id).await.unwrap();
     }

@@ -1,6 +1,6 @@
 //@ts-check
 import {LitElement, css, html} from "lit";
-import {Subject, mergeMap, takeUntil, tap} from "rxjs";
+import {Subject, mergeMap, take, takeUntil, tap} from "rxjs";
 import {filterForDoubleClick} from "@tronicboy/rxjs-operators";
 
 export const tagName = "listo-list";
@@ -25,6 +25,8 @@ export class ListoList extends LitElement {
     this._first_render = true;
     /** @type {Subject<number>} */
     this._deleteClick = new Subject();
+    /** @type {Subject<void>} */
+    this._deleteListClick = new Subject();
     /** @type {Subject<void>} */
     this._teardown = new Subject();
   }
@@ -54,6 +56,23 @@ export class ListoList extends LitElement {
         })
       )
       .subscribe();
+
+    this._deleteListClick
+      .pipe(
+        filterForDoubleClick(200),
+        take(1),
+        takeUntil(this._teardown),
+        mergeMap(() =>
+          fetch(`/api/v1/lists/${this.listId}`, {
+            method: "DELETE",
+          })
+        )
+      )
+      .subscribe(res => {
+        if (res.ok) {
+          this.remove();
+        }
+      });
   }
 
   disconnectedCallback() {
@@ -117,15 +136,17 @@ export class ListoList extends LitElement {
       this._first_render = false;
     }
 
-    return html`${this._items.map(
-      item => html` ${this._loading ? html`` : ""}
-        <li
-          class=${`item ${this._deletingIds.has(item.item_id) ? "deleting" : ""}`}
-          @click=${() => this._deleteClick.next(item.item_id)}
-        >
-          ${item.name}
-        </li>`
-    )}`;
+    return html`${this._items.length !== 0
+      ? this._items.map(
+          item => html` ${this._loading ? html`` : ""}
+            <li
+              class=${`item ${this._deletingIds.has(item.item_id) ? "deleting" : ""}`}
+              @click=${() => this._deleteClick.next(item.item_id)}
+            >
+              ${item.name}
+            </li>`
+        )
+      : html`<button type="button" class="delete" @click=${() => this._deleteListClick.next()}>Delete List</button>`}`;
   }
 }
 
