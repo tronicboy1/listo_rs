@@ -1,19 +1,26 @@
-{% extends "base.html" %}
-
-{% block content %}
+{% extends "base.html" %} {% block content %}
 <ul>
   {% for list in lists %}
   <li>
-    <h3>{{ list.name }}</h3>
-    <ul>
-      {% for item in list.items %}
-      <li>{{ item.name }}</li>
-      {% endfor %}
-    </ul>
+    <listo-list list-id="{{ list.list_id }}">
+      <h3 slot="list-name">{{ list.name }}</h3>
+      <ul>
+        {% for item in list.items %}
+        <li>{{ item.name }}</li>
+        {% endfor %}
+      </ul>
+      <template shadowrootmode="open">
+        <slot name="list-name"></slot>
+        <slot></slot>
+        <form>
+          <label for="name">Add Item</label>
+          <input type="text" name="name" id="name" />
+        </form>
+      </template>
+    </listo-list>
   </li>
   {% endfor %}
 </ul>
-{% endblock content %}
-
-{% block scripts %}
+{% endblock content %} {% block scripts %}
+<script defer type="module" src="/assets/js/listo-list.js"></script>
 {% endblock scripts %}

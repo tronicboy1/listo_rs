@@ -10,10 +10,13 @@ use listo_rs::{
     AppState,
 };
 use tera::Context;
+use tower_http::services::ServeDir;
 
 #[tokio::main]
 async fn main() {
     let state = AppState::new();
+
+    let serve_dir = ServeDir::new("assets");
 
     // build our application with a single route
     let app = Router::new()
@@ -41,7 +44,8 @@ async fn main() {
         .nest(
             "/api/v1/families",
             FamilyRouter::new(state.pool.clone()).into(),
-        );
+        )
+        .nest_service("/assets", serve_dir);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 

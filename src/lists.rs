@@ -154,9 +154,10 @@ async fn add_item(
     let item = Item::new(list_id, name);
 
     let mut conn = get_conn!(state.pool)?;
-    item.insert(&mut conn)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    item.insert(&mut conn).await.map_err(|err| {
+        dbg!(err);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })
 }
 
 async fn delete_item(
