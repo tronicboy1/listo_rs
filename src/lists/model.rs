@@ -24,7 +24,7 @@ impl List {
         }
     }
 
-    pub async fn insert(self, mut conn: Conn) -> Result<u64, mysql_async::Error> {
+    pub async fn insert(self, conn: &mut Conn) -> Result<u64, mysql_async::Error> {
         let stmt = conn
             .prep("INSERT INTO lists (`name`, family_id) VALUES (?, ?);")
             .await?;
@@ -231,10 +231,9 @@ mod tests {
         let list_name = String::from("My new test list: ") + &now;
         let list = List::new(list_name.clone(), family_id);
 
-        let conn = state.pool.get_conn().await.unwrap();
-        let list_id = list.insert(conn).await.unwrap();
-
         let mut conn = state.pool.get_conn().await.unwrap();
+        let list_id = list.insert(&mut conn).await.unwrap();
+
         let list = List::get(&mut conn, list_id).await.unwrap().unwrap();
 
         assert_eq!(list.name, list_name);

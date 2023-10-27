@@ -35,10 +35,12 @@ impl AuthState {
 
 impl AuthRouter {
     pub fn new(pool: Pool) -> Self {
-        Self(Router::new().route(
-            "/register",
-            post(create_user).with_state(AuthState::new(pool)),
-        ))
+        Self(
+            Router::new()
+                .route("/register", post(create_user))
+                .route("/login", post(login))
+                .with_state(AuthState::new(pool)),
+        )
     }
 }
 
@@ -55,15 +57,33 @@ pub struct Claims {
     iss: String,
 }
 
+impl Claims {
+    fn new(user_id: u64) -> Self {
+        Self {
+            sub: user_id,
+            exp: 1000000000000,
+            iss: String::from("listo_rs"),
+        }
+    }
+
+    fn token(&self) -> Result<String, jsonwebtoken::errors::Error> {
+        encode(
+            &jsonwebtoken::Header::default(),
+            &self,
+            &EncodingKey::from_secret(SECRET_KEY),
+        )
+    }
+}
+
 #[derive(Deserialize)]
-struct NewUser {
+struct UserBody {
     password: String,
     email: String,
 }
 
 async fn create_user(
     State(AuthState { pool }): State<AuthState>,
-    Json(NewUser { email, password }): Json<NewUser>,
+    Json(UserBody { email, password }): Json<UserBody>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let user = User::new(email, password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -73,26 +93,53 @@ async fn create_user(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let claim = Claims {
-        sub: user_id,
-        exp: 1000000000000,
-        iss: String::from("listo_rs"),
-    };
+    let claim = Claims::new(user_id);
 
-    let token = encode(
-        &jsonwebtoken::Header::default(),
-        &claim,
-        &EncodingKey::from_secret(SECRET_KEY),
-    )
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let token = claim
+        .token()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let cookie: Cookie = Cookie::build(("jwt", token)).path("/").into();
 
     Ok((
         StatusCode::CREATED,
         AppendHeaders([(SET_COOKIE, cookie.to_string())]),
-        Json(42),
     ))
+}
+
+async fn login(
+    State(AuthState { pool }): State<AuthState>,
+    Json(UserBody { email, password }): Json<UserBody>,
+) -> Result<axum::response::Response, StatusCode> {
+    let mut conn = get_conn!(pool)?;
+    let user = User::get_by_email(&mut conn, &email)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if let Some(user) = user {
+        let password_valid = user
+            .confirm_password(&password)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if password_valid {
+            let claim = Claims::new(user.user_id);
+
+            let token = claim
+                .token()
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+            let cookie: Cookie = Cookie::build(("jwt", token)).path("/").into();
+
+            Ok((
+                StatusCode::OK,
+                AppendHeaders([(SET_COOKIE, cookie.to_string())]),
+            )
+                .into_response())
+        } else {
+            Ok(StatusCode::BAD_REQUEST.into_response())
+        }
+    } else {
+        Ok(StatusCode::BAD_REQUEST.into_response())
+    }
 }
 
 #[cfg(test)]

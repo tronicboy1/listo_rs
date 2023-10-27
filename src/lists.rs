@@ -13,6 +13,7 @@ use tower::ServiceBuilder;
 
 use crate::{
     auth::{AuthGuardLayer, Claims, JwTokenReaderLayer},
+    families::Family,
     get_conn,
 };
 
@@ -98,16 +99,25 @@ struct NewListBody {
 }
 async fn add_list(
     State(state): State<Arc<ListState>>,
+    Extension(user): Extension<Claims>,
     Json(NewListBody { name, family_id }): Json<NewListBody>,
-) -> Result<impl IntoResponse, StatusCode> {
+) -> Result<axum::response::Response, StatusCode> {
     let ref pool = state.pool;
-    let conn = get_conn!(pool)?;
+    let mut conn = get_conn!(pool)?;
+
+    let is_member = Family::is_member(&mut conn, family_id, user.sub)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if !is_member {
+        return Ok(StatusCode::FORBIDDEN.into_response());
+    }
 
     let list = List::new(name, family_id);
-    list.insert(conn)
+    list.insert(&mut conn)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
-        .map(|list_id| Json(list_id))
+        .map(|list_id| Json(list_id).into_response())
 }
 
 async fn get_list_items(

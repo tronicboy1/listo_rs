@@ -4,7 +4,7 @@ use argon2::{
 };
 use mysql_async::{
     prelude::{FromRow, Queryable},
-    Conn, Params, Pool,
+    Conn, Params,
 };
 use serde::ser::{Serialize, SerializeStruct};
 
@@ -70,9 +70,10 @@ impl User {
         conn.exec_first(stmt, vec![user_id]).await
     }
 
-    pub async fn get_by_email(pool: Pool, email: &str) -> Result<Option<User>, mysql_async::Error> {
-        let mut conn = pool.get_conn().await?;
-
+    pub async fn get_by_email(
+        conn: &mut Conn,
+        email: &str,
+    ) -> Result<Option<User>, mysql_async::Error> {
         let stmt = conn.prep("SELECT * FROM users WHERE email = ?").await?;
 
         let email: mysql_async::Value = email.into();
