@@ -4,6 +4,13 @@
   margin-top: 1rem;
 }
 
+@media (prefers-color-scheme: dark) {
+  .add-item-form input {
+    background-color: var(--secondary-color);
+    color: white;
+  }
+}
+
 .add-item-form input {
   height: 50px;
   border: 1px solid var(--secondary-color);

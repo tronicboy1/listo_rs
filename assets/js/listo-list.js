@@ -109,8 +109,6 @@ export class ListoList extends LitElement {
       this._first_render = false;
     }
 
-    console.log(this._deletingIds);
-
     return html`${this._items.map(
       item => html` ${this._loading ? html`` : ""}
         <li
