@@ -1,6 +1,11 @@
-use std::sync::OnceLock;
+use std::sync::Arc;
 
-use axum::{extract::State, response::Html, routing::get, Extension, Router};
+use axum::{
+    extract::State,
+    response::{Html, IntoResponse, Redirect},
+    routing::get,
+    Extension, Router,
+};
 use mysql_async::Pool;
 use tera::{Context, Tera};
 
@@ -9,21 +14,22 @@ use crate::{
     lists::model::List,
 };
 
-static TEMPLATES: OnceLock<Tera> = OnceLock::new();
-
-pub fn get_templates() -> &'static Tera {
-    TEMPLATES.get_or_init(|| {
-        let reg = Tera::new("src/views/**/*").expect("tera parsing error");
-
-        reg
-    })
-}
-
 pub struct ViewRouter(Router);
 
-#[derive(Debug, Clone)]
+type ArcedState = Arc<ViewRouterState>;
+
+#[derive(Debug)]
 struct ViewRouterState {
     pool: Pool,
+    tera: Tera,
+}
+
+impl ViewRouterState {
+    fn new(pool: Pool) -> Arc<Self> {
+        let tera = Tera::new("src/views/templates/**/*").expect("tera parsing error");
+
+        Arc::new(Self { pool, tera })
+    }
 }
 
 impl ViewRouter {
@@ -31,25 +37,34 @@ impl ViewRouter {
         Self(
             Router::new()
                 .route(
-                    "/lists",
-                    get(
-                        |State(state): State<ViewRouterState>,
-                         Extension(claim): Extension<Claims>| async move {
-                            let lists = List::paginate(state.pool.clone(), claim.sub)
-                                .await
-                                .expect("Pagination failed");
-                            let mut ctx = Context::new();
-                            ctx.insert("lists", &lists);
+                    "/upload",
+                    get(|State(state): State<ArcedState>| async move {
+                        let mut context = Context::new();
+                        context.insert("name", "austin");
 
-                            let tera = get_templates();
-                            let html = tera.render("lists.html", &ctx).expect("render error");
+                        let html = state
+                            .tera
+                            .render("upload.html", &context)
+                            .expect("render error");
 
-                            Html(html)
-                        },
-                    ),
+                        Html(html)
+                    }),
+                )
+                .route("/", get(list_view))
+                .route(
+                    "/login",
+                    get(|State(state): State<ArcedState>| async move {
+                        let ctx = Context::new();
+                        let html = state
+                            .tera
+                            .render("login.html", &ctx)
+                            .expect("Template failed");
+
+                        Html(html)
+                    }),
                 )
                 .layer(JwTokenReaderLayer)
-                .with_state(ViewRouterState { pool }),
+                .with_state(ViewRouterState::new(pool)),
         )
     }
 }
@@ -58,4 +73,27 @@ impl Into<Router> for ViewRouter {
     fn into(self) -> Router {
         self.0
     }
+}
+
+async fn list_view(
+    State(state): State<ArcedState>,
+    claim: Option<Extension<Claims>>,
+) -> axum::response::Response {
+    // Redirect if not logged in
+    if claim.is_none() {
+        return Redirect::temporary("/login").into_response();
+    }
+
+    let claim = claim.unwrap();
+
+    let lists = List::paginate(state.pool.clone(), claim.sub)
+        .await
+        .expect("Pagination failed");
+
+    let mut ctx = Context::new();
+    ctx.insert("lists", &lists);
+
+    let html = state.tera.render("lists.html", &ctx).expect("render error");
+
+    Html(html).into_response()
 }

@@ -33,6 +33,7 @@ export class ListoList extends LitElement {
     super.connectedCallback();
 
     this.form.addEventListener("submit", this.handleFormSubmit);
+    document.addEventListener("visibilitychange", this.handleVisibility);
 
     this._deleteClick
       .pipe(
@@ -58,6 +59,7 @@ export class ListoList extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this._teardown.next();
+    document.removeEventListener("visibilitychange", this.handleVisibility);
   }
 
   createRenderRoot() {
@@ -93,6 +95,12 @@ export class ListoList extends LitElement {
         return this.refreshList();
       })
       .finally(() => (this._loading = false));
+  };
+
+  handleVisibility = () => {
+    if (document.visibilityState === "visible") {
+      this.refreshList();
+    }
   };
 
   refreshList() {

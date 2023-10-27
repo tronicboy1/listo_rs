@@ -10,10 +10,10 @@ pub mod auth;
 pub mod families;
 pub mod images;
 pub mod lists;
-pub mod views;
 #[cfg(test)]
 pub(crate) mod test_utils;
 pub mod users;
+pub mod views;
 
 pub struct AppState {
     pub origin: String,

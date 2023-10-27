@@ -1,0 +1,30 @@
+{% extends "base.html" %} {% block head %}
+<link rel="stylesheet" href="/assets/css/registrations.css" />
+{% endblock head %} {% block content %}
+<div class="card">
+  <h1>Listo</h1>
+  <p>An elegant List Manager</p>
+</div>
+<div class="card">
+  <listo-registration mode="login">
+    <div class="button-group">
+      <button class="button-left button active" id="login-button">Login</button>
+      <button class="button button-right" id="register-button">Register</button>
+    </div>
+
+    <form class="login-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required autocomplete="current-password" />
+      </div>
+      <button id="submit" type="submit">Submit</button>
+    </form>
+  </listo-registration>
+</div>
+{% endblock content %} {% block scripts %}
+<script type="module" src="/assets/js/listo-registration.js"></script>
+{% endblock scripts %}
