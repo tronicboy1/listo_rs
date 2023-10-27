@@ -2,8 +2,14 @@ use std::net::SocketAddr;
 
 use axum::{response::Html, routing::get, Router};
 use listo_rs::{
-    auth::AuthRouter, families::FamilyRouter, images::ImagesRouter, lists::ListRouter, AppState,
+    auth::AuthRouter,
+    families::FamilyRouter,
+    images::ImagesRouter,
+    lists::ListRouter,
+    views::{get_templates, ViewRouter},
+    AppState,
 };
+use tera::Context;
 
 #[tokio::main]
 async fn main() {
@@ -18,10 +24,17 @@ async fn main() {
                     .await
                     .unwrap();
 
-                Html(template)
+                let mut context = Context::new();
+                context.insert("name", "austin");
+
+                let tera = get_templates();
+                let html = tera.render("upload.html", &context).expect("render error");
+
+                Html(html)
             }),
         )
         .with_state(state.clone())
+        .merge(ViewRouter::new(state.pool.clone()))
         .nest("/api/v1/auth", AuthRouter::new(state.pool.clone()).into())
         .nest("/images", ImagesRouter::new().into())
         .nest("/api/v1/lists", ListRouter::new(state.pool.clone()).into())

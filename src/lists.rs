@@ -23,7 +23,7 @@ use self::{
 };
 
 mod guard;
-mod model;
+pub mod model;
 
 pub struct ListRouter(Router);
 

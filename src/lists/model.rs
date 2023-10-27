@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::find_col_or_err;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct List {
     pub list_id: u64,
     pub name: String,
@@ -120,7 +120,7 @@ impl FromRow for List {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Item {
     item_id: u64,
     list_id: u64,
