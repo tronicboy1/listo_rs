@@ -19,7 +19,7 @@ impl Family {
         }
     }
 
-    pub async fn insert(self, mut conn: Conn) -> Result<u64, mysql_async::Error> {
+    pub async fn insert(self, conn: &mut Conn) -> Result<u64, mysql_async::Error> {
         let stmt = conn
             .prep("INSERT INTO families (family_name) VALUES (?);")
             .await?;
@@ -33,7 +33,7 @@ impl Family {
             .expect("mysql guarantees id returned"))
     }
 
-    pub async fn destroy(mut conn: Conn, family_id: u64) -> Result<(), mysql_async::Error> {
+    pub async fn destroy(conn: &mut Conn, family_id: u64) -> Result<(), mysql_async::Error> {
         let stmt = conn
             .prep("DELETE FROM families WHERE family_id = ?;")
             .await?;
@@ -43,7 +43,7 @@ impl Family {
     }
 
     pub async fn add_member(
-        mut conn: Conn,
+        conn: &mut Conn,
         family_id: u64,
         user_id: u64,
     ) -> Result<(), mysql_async::Error> {
@@ -56,7 +56,7 @@ impl Family {
     }
 
     pub async fn remove_member(
-        mut conn: Conn,
+        conn: &mut Conn,
         family_id: u64,
         user_id: u64,
     ) -> Result<(), mysql_async::Error> {
@@ -68,7 +68,7 @@ impl Family {
         conn.exec_drop(stmt, params).await
     }
 
-    pub async fn members(mut conn: Conn, family_id: u64) -> Result<Vec<User>, mysql_async::Error> {
+    pub async fn members(conn: &mut Conn, family_id: u64) -> Result<Vec<User>, mysql_async::Error> {
         let stmt = conn
             .prep(
                 "SELECT * FROM users
@@ -82,7 +82,7 @@ impl Family {
     }
 
     pub async fn is_member(
-        mut conn: Conn,
+        conn: &mut Conn,
         family_id: u64,
         user_id: u64,
     ) -> Result<bool, mysql_async::Error> {
@@ -125,69 +125,62 @@ mod tests {
     async fn can_create_family() {
         let (state, family_id) = create_family().await;
 
-        let conn = state.pool.get_conn().await.unwrap();
-        Family::destroy(conn, family_id).await.unwrap();
+        let mut conn = state.pool.get_conn().await.unwrap();
+        Family::destroy(&mut conn, family_id).await.unwrap();
     }
 
     #[tokio::test]
     async fn can_add_member() {
         let (state, family_id) = create_family().await;
-        let conn = state.pool.get_conn().await.unwrap();
+        let mut conn = state.pool.get_conn().await.unwrap();
 
-        Family::add_member(conn, family_id, 1).await.unwrap();
-
-        let conn = state.pool.get_conn().await.unwrap();
-        Family::destroy(conn, family_id).await.unwrap();
+        Family::add_member(&mut conn, family_id, 1).await.unwrap();
+        Family::destroy(&mut conn, family_id).await.unwrap();
     }
 
     #[tokio::test]
     async fn can_remove_member() {
         let (state, family_id) = create_family().await;
 
-        let conn = state.pool.get_conn().await.unwrap();
-        Family::add_member(conn, family_id, 1).await.unwrap();
+        let mut conn = state.pool.get_conn().await.unwrap();
+        Family::add_member(&mut conn, family_id, 1).await.unwrap();
 
-        let conn = state.pool.get_conn().await.unwrap();
-        Family::remove_member(conn, family_id, 1).await.unwrap();
+        Family::remove_member(&mut conn, family_id, 1)
+            .await
+            .unwrap();
 
-        let conn = state.pool.get_conn().await.unwrap();
-        let users = Family::members(conn, family_id).await.unwrap();
+        let users = Family::members(&mut conn, family_id).await.unwrap();
 
         assert!(users.iter().find(|user| user.user_id == 1).is_none());
 
-        let conn = state.pool.get_conn().await.unwrap();
-        Family::destroy(conn, family_id).await.unwrap();
+        Family::destroy(&mut conn, family_id).await.unwrap();
     }
 
     #[tokio::test]
     async fn can_show_members() {
         let (state, family_id) = create_family().await;
 
-        let conn = state.pool.get_conn().await.unwrap();
-        Family::add_member(conn, family_id, 1).await.unwrap();
+        let mut conn = state.pool.get_conn().await.unwrap();
+        Family::add_member(&mut conn, family_id, 1).await.unwrap();
 
-        let conn = state.pool.get_conn().await.unwrap();
-        let users = Family::members(conn, family_id).await.unwrap();
+        let users = Family::members(&mut conn, family_id).await.unwrap();
 
         assert!(users.iter().find(|user| user.user_id == 1).is_some());
 
-        let conn = state.pool.get_conn().await.unwrap();
-        Family::destroy(conn, family_id).await.unwrap();
+        Family::destroy(&mut conn, family_id).await.unwrap();
     }
 
     #[tokio::test]
     async fn confirm_user_is_member() {
         let (state, family_id) = create_family().await;
 
-        let conn = state.pool.get_conn().await.unwrap();
-        Family::add_member(conn, family_id, 1).await.unwrap();
+        let mut conn = state.pool.get_conn().await.unwrap();
+        Family::add_member(&mut conn, family_id, 1).await.unwrap();
 
-        let conn = state.pool.get_conn().await.unwrap();
-        let is_member = Family::is_member(conn, family_id, 1).await.unwrap();
+        let is_member = Family::is_member(&mut conn, family_id, 1).await.unwrap();
 
         assert!(is_member);
 
-        let conn = state.pool.get_conn().await.unwrap();
-        Family::destroy(conn, family_id).await.unwrap();
+        Family::destroy(&mut conn, family_id).await.unwrap();
     }
 }

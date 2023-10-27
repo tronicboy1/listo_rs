@@ -79,13 +79,9 @@ async fn get_list(
     State(state): State<Arc<ListState>>,
     Path(list_id): Path<u64>,
 ) -> Result<axum::response::Response, StatusCode> {
-    let conn = state
-        .pool
-        .get_conn()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut conn = get_conn!(state.pool)?;
 
-    let result = List::get(conn, list_id)
+    let result = List::get(&mut conn, list_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -118,13 +114,9 @@ async fn get_list_items(
     State(state): State<Arc<ListState>>,
     Path(list_id): Path<u64>,
 ) -> Result<axum::response::Response, StatusCode> {
-    let conn = state
-        .pool
-        .get_conn()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut conn = get_conn!(state.pool)?;
 
-    let result = List::get(conn, list_id)
+    let result = List::get(&mut conn, list_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -132,7 +124,7 @@ async fn get_list_items(
         return Ok(StatusCode::NOT_FOUND.into_response());
     }
 
-    let items = Item::get_by_list(state.pool.clone(), list_id)
+    let items = Item::get_by_list(&mut conn, list_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -151,7 +143,8 @@ async fn add_item(
 ) -> impl IntoResponse {
     let item = Item::new(list_id, name);
 
-    item.insert(state.pool.clone())
+    let mut conn = get_conn!(state.pool)?;
+    item.insert(&mut conn)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
@@ -160,7 +153,8 @@ async fn delete_item(
     State(state): State<Arc<ListState>>,
     Path((_, item_id)): Path<(u64, u64)>,
 ) -> impl IntoResponse {
-    let item = Item::get(state.pool.clone(), item_id)
+    let mut conn = get_conn!(state.pool)?;
+    let item = Item::get(&mut conn, item_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -168,7 +162,7 @@ async fn delete_item(
         return Ok(StatusCode::NOT_FOUND);
     }
 
-    match Item::delete(state.pool.clone(), item_id).await {
+    match Item::delete(&mut conn, item_id).await {
         Ok(_) => Ok(StatusCode::OK),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }

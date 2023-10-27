@@ -1,4 +1,7 @@
-use std::{sync::Arc, time::{SystemTime, UNIX_EPOCH}};
+use std::{
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use crate::families::Family;
 
@@ -25,15 +28,19 @@ impl TestState {
 pub async fn create_family() -> (Arc<TestState>, u64) {
     let state = TestState::new();
 
-    let now = SystemTime::now()
+    let now = now_string();
+    let f = Family::new(format!("New Test Family: {}", now));
+
+    let mut conn = state.pool.get_conn().await.unwrap();
+    let id = f.insert(&mut conn).await.unwrap();
+
+    (state, id)
+}
+
+pub fn now_string() -> String {
+    SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis()
-        .to_string();
-    let f = Family::new(format!("New Test Family: {}", now));
-
-    let conn = state.pool.get_conn().await.unwrap();
-    let id = f.insert(conn).await.unwrap();
-
-    (state, id)
+        .to_string()
 }

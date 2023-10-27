@@ -45,6 +45,7 @@ CREATE TABLE list_items (
 CREATE TABLE users (
   user_id SERIAL PRIMARY KEY,
   email VARCHAR(320) NOT NULL,
+  `password` VARCHAR(255) NOT NULL,
   UNIQUE(email)
 );
 ```

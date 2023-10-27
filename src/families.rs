@@ -60,9 +60,9 @@ async fn show_users_families(
 ) -> Result<impl IntoResponse, StatusCode> {
     let user_id = user.sub;
 
-    let conn = get_conn!(pool)?;
+    let mut conn = get_conn!(pool)?;
 
-    let families = User::families(conn, user_id)
+    let families = User::families(&mut conn, user_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -73,9 +73,9 @@ async fn show_family_members(
     State(FamilyRouterState { pool }): State<FamilyRouterState>,
     Path(family_id): Path<u64>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let conn = get_conn!(pool)?;
+    let mut conn = get_conn!(pool)?;
 
-    let members = Family::members(conn, family_id)
+    let members = Family::members(&mut conn, family_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -92,16 +92,15 @@ async fn new_family(
     Extension(user): Extension<Claims>,
     Json(NewFamilyBody { family_name }): Json<NewFamilyBody>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let conn = get_conn!(pool)?;
+    let mut conn = get_conn!(pool)?;
 
     let f = Family::new(family_name);
     let family_id = f
-        .insert(conn)
+        .insert(&mut conn)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let conn = get_conn!(pool)?;
-    Family::add_member(conn, family_id, user.sub)
+    Family::add_member(&mut conn, family_id, user.sub)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -112,9 +111,9 @@ async fn delete_family(
     State(FamilyRouterState { pool }): State<FamilyRouterState>,
     Path(family_id): Path<u64>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let conn = get_conn!(pool)?;
+    let mut conn = get_conn!(pool)?;
 
-    Family::destroy(conn, family_id)
+    Family::destroy(&mut conn, family_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
@@ -129,8 +128,8 @@ async fn add_member(
     Path(family_id): Path<u64>,
     Json(AddMemberBody { user_id }): Json<AddMemberBody>,
 ) -> Result<axum::response::Response, StatusCode> {
-    let conn = get_conn!(pool)?;
-    let is_member = Family::is_member(conn, family_id, user_id)
+    let mut conn = get_conn!(pool)?;
+    let is_member = Family::is_member(&mut conn, family_id, user_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -138,8 +137,7 @@ async fn add_member(
         return Ok(StatusCode::BAD_REQUEST.into_response());
     }
 
-    let conn = get_conn!(pool)?;
-    Family::add_member(conn, family_id, user_id)
+    Family::add_member(&mut conn, family_id, user_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
         .map(|res| res.into_response())
@@ -159,8 +157,8 @@ async fn remove_member(
         return Ok(StatusCode::BAD_REQUEST.into_response());
     }
 
-    let conn = get_conn!(pool)?;
-    let is_member = Family::is_member(conn, family_id, user_id)
+    let mut conn = get_conn!(pool)?;
+    let is_member = Family::is_member(&mut conn, family_id, user_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -168,8 +166,7 @@ async fn remove_member(
         return Ok(StatusCode::BAD_REQUEST.into_response());
     }
 
-    let conn = get_conn!(pool)?;
-    Family::remove_member(conn, family_id, user_id)
+    Family::remove_member(&mut conn, family_id, user_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
         .map(|res| res.into_response())

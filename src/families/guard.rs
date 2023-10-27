@@ -59,8 +59,8 @@ where
 
                     Box::pin(async move {
                         let is_member: Result<bool, mysql_async::Error> = async move {
-                            let conn = pool.get_conn().await?;
-                            Family::is_member(conn, family_id, user_id).await
+                            let mut conn = pool.get_conn().await?;
+                            Family::is_member(&mut conn, family_id, user_id).await
                         }
                         .await;
 

@@ -13,6 +13,9 @@ pub mod lists;
 #[cfg(test)]
 pub(crate) mod test_utils;
 pub mod users;
+
+extern crate argon2;
+
 pub struct AppState {
     pub origin: String,
     pub pool: mysql_async::Pool,
@@ -127,7 +130,7 @@ macro_rules! find_col_or_err {
 /// ````
 #[macro_export]
 macro_rules! get_conn {
-    ($pool: ident) => {{
+    ($pool: expr) => {{
         $pool
             .get_conn()
             .await

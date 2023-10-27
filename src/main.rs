@@ -25,7 +25,7 @@ async fn main() {
             }),
         )
         .with_state(state.clone())
-        .nest("/auth", AuthRouter::new().into())
+        .nest("/auth", AuthRouter::new(state.pool.clone()).into())
         .nest("/images", ImagesRouter::new().into())
         .nest("/lists", ListRouter::new(state.pool.clone()).into())
         .nest("/families", FamilyRouter::new(state.pool.clone()).into());

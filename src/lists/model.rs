@@ -25,7 +25,9 @@ impl List {
     }
 
     pub async fn insert(self, mut conn: Conn) -> Result<u64, mysql_async::Error> {
-        let stmt = conn.prep("INSERT INTO lists (`name`, family_id) VALUES (?, ?);").await?;
+        let stmt = conn
+            .prep("INSERT INTO lists (`name`, family_id) VALUES (?, ?);")
+            .await?;
 
         let params = Params::Positional(vec![self.name.into(), self.family_id.into()]);
         conn.exec_drop(stmt, params).await?;
@@ -66,14 +68,15 @@ impl List {
         Ok(lists)
     }
 
-    pub async fn get(mut conn: Conn, list_id: u64) -> Result<Option<Self>, mysql_async::Error> {
+    pub async fn get(conn: &mut Conn, list_id: u64) -> Result<Option<Self>, mysql_async::Error> {
         let stmt = conn.prep("SELECT * FROM lists WHERE list_id = ?").await?;
 
         conn.exec_first(stmt, vec![list_id]).await
     }
 
     async fn load_items(mut self, pool: Pool) -> Result<Self, mysql_async::Error> {
-        let items: Vec<Item> = Item::get_by_list(pool, self.list_id).await?;
+        let mut conn = pool.get_conn().await?;
+        let items: Vec<Item> = Item::get_by_list(&mut conn, self.list_id).await?;
 
         self.items = Some(items);
 
@@ -149,9 +152,7 @@ impl Item {
         }
     }
 
-    pub async fn get(pool: Pool, item_id: u64) -> Result<Option<Item>, mysql_async::Error> {
-        let mut conn = pool.get_conn().await?;
-
+    pub async fn get(conn: &mut Conn, item_id: u64) -> Result<Option<Item>, mysql_async::Error> {
         let stmt = conn
             .prep("SELECT * FROM list_items WHERE item_id = ?;")
             .await?;
@@ -159,9 +160,10 @@ impl Item {
         conn.exec_first(stmt, vec![item_id]).await
     }
 
-    pub async fn get_by_list(pool: Pool, list_id: u64) -> Result<Vec<Item>, mysql_async::Error> {
-        let mut conn = pool.get_conn().await?;
-
+    pub async fn get_by_list(
+        conn: &mut Conn,
+        list_id: u64,
+    ) -> Result<Vec<Item>, mysql_async::Error> {
         let stmt = conn
             .prep("SELECT * FROM list_items WHERE list_id = ?;")
             .await?;
@@ -169,9 +171,7 @@ impl Item {
         conn.exec(stmt, vec![list_id]).await
     }
 
-    pub async fn insert(self, pool: Pool) -> Result<(), mysql_async::Error> {
-        let mut conn = pool.get_conn().await?;
-
+    pub async fn insert(self, conn: &mut Conn) -> Result<(), mysql_async::Error> {
         let stmt = conn
             .prep(
                 "INSERT INTO list_items (
@@ -184,9 +184,7 @@ impl Item {
         conn.exec_drop(stmt, params).await
     }
 
-    pub async fn delete(pool: Pool, item_id: u64) -> Result<(), mysql_async::Error> {
-        let mut conn = pool.get_conn().await?;
-
+    pub async fn delete(conn: &mut Conn, item_id: u64) -> Result<(), mysql_async::Error> {
         let stmt = conn
             .prep("DELETE FROM list_items WHERE item_id = ?;")
             .await?;
@@ -236,12 +234,11 @@ mod tests {
         let conn = state.pool.get_conn().await.unwrap();
         let list_id = list.insert(conn).await.unwrap();
 
-        let conn = state.pool.get_conn().await.unwrap();
-        let list = List::get(conn, list_id).await.unwrap().unwrap();
+        let mut conn = state.pool.get_conn().await.unwrap();
+        let list = List::get(&mut conn, list_id).await.unwrap().unwrap();
 
         assert_eq!(list.name, list_name);
 
-        let conn = state.pool.get_conn().await.unwrap();
-        Family::destroy(conn, family_id).await.unwrap();
+        Family::destroy(&mut conn, family_id).await.unwrap();
     }
 }
