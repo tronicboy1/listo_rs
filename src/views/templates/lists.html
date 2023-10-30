@@ -2,6 +2,8 @@
 <ul class="list-of-lists" id="list-of-lists">
   {% for list in lists %} {{ list | safe }} {% endfor %}
 </ul>
+
+{% if families | length > 0 %}
 <listo-new-list class="card">
   <form autocomplete="off">
     {% if families | length > 1 %}
@@ -23,6 +25,8 @@
     </button>
   </form>
 </listo-new-list>
+{% endif %}
+
 {% include "components/navbar.html" %} {% endblock content %} {% block scripts %}
 <script defer type="module" src="/assets/js/listo-list.js"></script>
 <script defer type="module" src="/assets/js/listo-new-list.js"></script>
