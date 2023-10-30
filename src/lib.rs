@@ -30,7 +30,7 @@ impl AppState {
             .db_name(Some("listo"))
             .user(Some("root"))
             .pass(Some(db_password))
-            .tcp_port(3307);
+            .tcp_port(3306);
 
         Arc::new(Self {
             origin: String::from("My Buthole 🙂"),
