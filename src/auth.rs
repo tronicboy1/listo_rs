@@ -3,11 +3,11 @@ const SECRET_KEY: &'static [u8] = b"my-secret";
 use axum::{
     extract::State,
     http::StatusCode,
-    response::{AppendHeaders, IntoResponse},
-    routing::post,
+    response::{AppendHeaders, IntoResponse, Redirect},
+    routing::{get, post},
     Json, Router,
 };
-use cookie::Cookie;
+use cookie::{time::OffsetDateTime, Cookie};
 use http::header::SET_COOKIE;
 use jsonwebtoken::{encode, EncodingKey};
 use mysql_async::Pool;
@@ -40,6 +40,19 @@ impl AuthRouter {
             Router::new()
                 .route("/register", post(create_user))
                 .route("/login", post(login))
+                .route(
+                    "/logout",
+                    get(|| async {
+                        let clear_cookie = Cookie::build(("jwt", "logout"))
+                            .expires(OffsetDateTime::now_utc())
+                            .path("/")
+                            .to_string();
+                        (
+                            AppendHeaders([(SET_COOKIE, clear_cookie)]),
+                            Redirect::to("/login"),
+                        )
+                    }),
+                )
                 .with_state(AuthState::new(pool)),
         )
     }

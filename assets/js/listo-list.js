@@ -125,6 +125,7 @@ export class ListoList extends LitElement {
   refreshList() {
     return fetch(`/api/v1/lists/${this.listId}/items`)
       .then(res => res.json())
+      .catch(() => this.remove())
       .then(items => {
         this._items = items;
       });

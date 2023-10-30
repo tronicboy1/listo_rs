@@ -42,6 +42,19 @@ impl Family {
         conn.exec_drop(stmt, params).await
     }
 
+    pub async fn paginate(conn: &mut Conn, user_id: u64) -> Result<Vec<Self>, mysql_async::Error> {
+        let stmt = conn
+            .prep(
+                "SELECT * FROM families
+                INNER JOIN users_families ON families.family_id = users_families.family_id
+                WHERE user_id = ?;",
+            )
+            .await?;
+
+        let params = Params::Positional(vec![user_id.into()]);
+        conn.exec(stmt, params).await
+    }
+
     pub async fn add_member(
         conn: &mut Conn,
         family_id: u64,
@@ -135,6 +148,22 @@ mod tests {
         let mut conn = state.pool.get_conn().await.unwrap();
 
         Family::add_member(&mut conn, family_id, 1).await.unwrap();
+        Family::destroy(&mut conn, family_id).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn can_paginate_for_user() {
+        let (state, family_id) = create_family().await;
+        let mut conn = state.pool.get_conn().await.unwrap();
+
+        Family::add_member(&mut conn, family_id, 1).await.unwrap();
+
+        let families = Family::paginate(&mut conn, 1).await.unwrap();
+        assert!(families
+            .iter()
+            .find(|fam| fam.family_id == family_id)
+            .is_some());
+
         Family::destroy(&mut conn, family_id).await.unwrap();
     }
 

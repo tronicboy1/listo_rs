@@ -1,36 +1,25 @@
 {% extends "base.html" %} {% block content %}
-<ul class="list-of-lists">
-  {% for list in lists %}
-  <li>
-    <listo-list class="card" list-id="{{ list.list_id }}" list-items="{{ list.items | json_encode }}">
-      <div slot="list-name" class="title">
-        <h3>{{ list.name }}</h3>
-      </div>
-      <ul>
-        {% if list.items | length < 1 %}
-        <button type="button" class="delete">Delete List</button>
-        {% else %} {% for item in list.items %}
-        <li class="item">{{ item.name }}</li>
-        {% endfor %} {%endif%}
-      </ul>
-      <template shadowrootmode="open">
-        <link rel="stylesheet" href="/assets/css/listo-list.css" />
-        <link rel="stylesheet" href="/assets/css/variables.css" />
-        <slot name="list-name"></slot>
-        <form autocomplete="off" class="add-item-form">
-          <input type="text" name="name" id="name" minlength="1" maxlength="33" required />
-          <button id="add" type="submit">
-            <svg xmlns="http://www.w3.org/2000/svg" height="48" width="48" viewBox="0, 0, 48, 48">
-              <path d="M22.5 38V25.5H10V22.5H22.5V10H25.5V22.5H38V25.5H25.5V38Z" />
-            </svg>
-          </button>
-        </form>
-        <slot></slot>
-      </template>
-    </listo-list>
-  </li>
-  {% endfor %}
+<ul class="list-of-lists" id="list-of-lists">
+  {% for list in lists %} {{ list | safe }} {% endfor %}
 </ul>
-{% endblock content %} {% block scripts %}
+<listo-new-list class="card">
+  <form autocomplete="off">
+    <label for="family-id">List Family</label>
+    <select name="family-id" id="family-id">
+      {% for family in families %}
+      <option value="{{ family.family_id }}">{{ family.family_name }}</option>
+      {% endfor %}
+    </select>
+    <label for="list-name">List Name</label>
+    <input id="list-name" name="list-name" minlength="1" type="text" maxlength="33" required />
+    <button id="add" type="submit">
+      <svg xmlns="http://www.w3.org/2000/svg" height="48" width="48" viewBox="0, 0, 48, 48">
+        <path d="M22.5 38V25.5H10V22.5H22.5V10H25.5V22.5H38V25.5H25.5V38Z" />
+      </svg>
+    </button>
+  </form>
+</listo-new-list>
+{% include "components/navbar.html" %} {% endblock content %} {% block scripts %}
 <script defer type="module" src="/assets/js/listo-list.js"></script>
+<script defer type="module" src="/assets/js/listo-new-list.js"></script>
 {% endblock scripts %}

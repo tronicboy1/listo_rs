@@ -1,17 +1,19 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::State,
+    extract::{Path, State},
     response::{Html, IntoResponse, Redirect},
     routing::get,
     Extension, Router,
 };
+use http::StatusCode;
 use mysql_async::Pool;
 use tera::{Context, Tera};
 
 use crate::{
     auth::{Claims, JwTokenReaderLayer},
-    lists::model::List,
+    families::Family,
+    lists::model::{List, Item},
 };
 
 pub struct ViewRouter(Router);
@@ -50,7 +52,26 @@ impl ViewRouter {
                         Html(html)
                     }),
                 )
-                .route("/", get(list_view))
+                .route("/", get(|| async { Redirect::to("/lists") }))
+                .route("/lists", get(lists_view))
+                .route(
+                    "/lists/:list_id",
+                    get(
+                        |State(state): State<ArcedState>, Path(list_id): Path<u64>| async move {
+                            let mut conn = state.pool.get_conn().await.expect("Sql Error");
+                            let list = List::get(&mut conn, list_id).await.expect("Sql Error");
+
+                            if let Some(mut list) = list {
+                                let list_items = Item::get_by_list(&mut conn, list_id).await.expect("Sql error");
+                                list.items = Some(list_items);
+
+                                Html(render_list(&state.tera, &list)).into_response()
+                            } else {
+                                StatusCode::NOT_FOUND.into_response()
+                            }
+                        },
+                    ),
+                )
                 .route(
                     "/login",
                     get(|State(state): State<ArcedState>| async move {
@@ -75,7 +96,7 @@ impl Into<Router> for ViewRouter {
     }
 }
 
-async fn list_view(
+async fn lists_view(
     State(state): State<ArcedState>,
     claim: Option<Extension<Claims>>,
 ) -> axum::response::Response {
@@ -86,14 +107,33 @@ async fn list_view(
 
     let claim = claim.unwrap();
 
-    let lists = List::paginate(state.pool.clone(), claim.sub)
+    // TODO join futures
+    let lists: Vec<String> = List::paginate(state.pool.clone(), claim.sub)
         .await
-        .expect("Pagination failed");
+        .expect("Pagination failed")
+        .iter()
+        .map(|list| render_list(&state.tera, list))
+        .collect();
+
+    let mut conn = state.pool.get_conn().await.expect("Sql connection error");
+    let families = Family::paginate(&mut conn, claim.sub)
+        .await
+        .expect("Sql error");
 
     let mut ctx = Context::new();
     ctx.insert("lists", &lists);
+    ctx.insert("families", &families);
 
     let html = state.tera.render("lists.html", &ctx).expect("render error");
 
     Html(html).into_response()
+}
+
+/// Renders a list into a listo-list web component HTML template
+fn render_list(tera: &Tera, list: &List) -> String {
+    let mut ctx = Context::new();
+    ctx.insert("list", list);
+
+    tera.render("components/listo-list.html", &ctx)
+        .expect("List template error")
 }
