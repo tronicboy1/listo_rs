@@ -23,6 +23,10 @@ pub struct AppState {
 impl AppState {
     pub fn new() -> Arc<Self> {
         let db_password = std::env::var("DB_PASSWORD").expect("Must define DB_PASSWORD env var");
+        let db_port: u16 = std::env::var("DB_PORT")
+            .unwrap_or(String::from("3306"))
+            .parse()
+            .expect("Invalid DB port");
 
         let opts = mysql_async::OptsBuilder::default()
             .ip_or_hostname("localhost")
@@ -30,7 +34,7 @@ impl AppState {
             .db_name(Some("listo"))
             .user(Some("root"))
             .pass(Some(db_password))
-            .tcp_port(3306);
+            .tcp_port(db_port);
 
         Arc::new(Self {
             origin: String::from("My Buthole 🙂"),
