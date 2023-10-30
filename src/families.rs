@@ -11,7 +11,7 @@ use tower::ServiceBuilder;
 
 use crate::{
     auth::{Claims, JwTokenReaderLayer},
-    get_conn,
+    get_conn, map_internal_error,
     users::User,
 };
 
@@ -95,14 +95,9 @@ async fn new_family(
     let mut conn = get_conn!(pool)?;
 
     let f = Family::new(family_name);
-    let family_id = f
-        .insert(&mut conn)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let family_id = map_internal_error!(f.insert(&mut conn).await)?;
 
-    Family::add_member(&mut conn, family_id, user.sub)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    map_internal_error!(Family::add_member(&mut conn, family_id, user.sub).await)?;
 
     Ok(())
 }

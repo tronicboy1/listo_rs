@@ -154,6 +154,13 @@ form select {
   width: 100%;
 }
 
+@media (prefers-color-scheme: dark) {
+  form input {
+    background-color: var(--secondary-color);
+    color: white;
+  }
+}
+
 form textarea {
   height: 10vh;
   min-height: 80px;

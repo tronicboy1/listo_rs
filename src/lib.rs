@@ -142,3 +142,13 @@ macro_rules! get_conn {
             .map_err(|_| http::StatusCode::INTERNAL_SERVER_ERROR)
     }};
 }
+
+#[macro_export]
+macro_rules! map_internal_error {
+    ($code: expr) => {
+        $code.map_err(|err| {
+            dbg!(err);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })
+    };
+}
