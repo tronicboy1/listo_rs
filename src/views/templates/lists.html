@@ -4,12 +4,16 @@
 </ul>
 <listo-new-list class="card">
   <form autocomplete="off">
+    {% if families | length > 1 %}
     <label for="family-id">List Family</label>
     <select name="family-id" id="family-id">
       {% for family in families %}
       <option value="{{ family.family_id }}">{{ family.family_name }}</option>
       {% endfor %}
     </select>
+    {% else %}
+    <input type="hidden" name="family-id" value="{{ families[0].family_id }}" />
+    {% endif %}
     <label for="list-name">List Name</label>
     <input id="list-name" name="list-name" minlength="1" type="text" maxlength="33" required />
     <button id="add" type="submit">
