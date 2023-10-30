@@ -30,7 +30,10 @@ async fn main() {
         .parse()
         .expect("invalid port");
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    let addr = std::env::var("ADDRESS")
+        .ok()
+        .and_then(|add| add.parse::<SocketAddr>().ok())
+        .unwrap_or(SocketAddr::from(([0, 0, 0, 0], port)));
 
     // Can use oneshot to gracefully shutdown
     let (_shutdown_tx, rx) = tokio::sync::oneshot::channel::<()>();
