@@ -59,7 +59,7 @@ export class ListoRegistration extends LitElement {
         })
           .then(res => {
             if (res.ok) {
-              //location.href = "/";
+              location.href = "/";
             }
           })
           .finally(() => (this._loading = false))
