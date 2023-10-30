@@ -25,6 +25,11 @@ async fn main() {
         )
         .nest_service("/assets", serve_dir);
 
+    let port: u16 = std::env::var("PORT")
+        .unwrap_or(String::from("3000"))
+        .parse()
+        .expect("invalid port");
+
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
 
     // Can use oneshot to gracefully shutdown
