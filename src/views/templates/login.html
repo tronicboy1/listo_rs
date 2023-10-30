@@ -1,5 +1,6 @@
 {% extends "base.html" %} {% block head %}
 <link rel="stylesheet" href="/assets/css/registrations.css" />
+<script src="https://www.google.com/recaptcha/api.js?render=6LcuLlsgAAAAADL_n_1hS7zeQMKX6xbi10jQYIYR"></script>
 {% endblock head %} {% block content %}
 <div class="card header">
   <h1>Listo</h1>
@@ -12,7 +13,7 @@
       <button class="button button-right" id="register-button">Register</button>
     </div>
 
-    <form class="login-form">
+    <form class="login-form" id="login-form">
       <div class="form-group">
         <label for="email">Email</label>
         <input id="email" name="email" type="email" required autocomplete="email" />

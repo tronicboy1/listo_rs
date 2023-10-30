@@ -47,19 +47,24 @@ export class ListoRegistration extends LitElement {
 
     let uri = this._mode.toUpperCase() === "LOGIN" ? "/api/v1/auth/login" : "/api/v1/auth/register";
     this._loading = true;
-    fetch(uri, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({email, password}),
-    })
-      .then(res => {
-        if (res.ok) {
-          location.href = "/";
-        }
-      })
-      .finally(() => (this._loading = false));
+
+    grecaptcha.ready(() => {
+      grecaptcha.execute("6LcuLlsgAAAAADL_n_1hS7zeQMKX6xbi10jQYIYR", {action: "submit"}).then(token =>
+        fetch(uri, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({email, password, token}),
+        })
+          .then(res => {
+            if (res.ok) {
+              //location.href = "/";
+            }
+          })
+          .finally(() => (this._loading = false))
+      );
+    });
   };
 }
 

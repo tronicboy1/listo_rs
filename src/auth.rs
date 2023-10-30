@@ -95,6 +95,7 @@ struct UserBody {
     password: String,
     #[validate(email)]
     email: String,
+    token: String,
 }
 
 impl TryFrom<UserBody> for User {
@@ -105,10 +106,24 @@ impl TryFrom<UserBody> for User {
     }
 }
 
+macro_rules! return_400_if_bad_recaptcha {
+    ($token: expr) => {
+        let valid = verify_recaptcha_token($token)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        if !valid {
+            return Ok(StatusCode::BAD_REQUEST.into_response());
+        }
+    };
+}
+
 async fn create_user(
     State(AuthState { pool }): State<AuthState>,
     Json(user_body): Json<UserBody>,
 ) -> Result<axum::response::Response, StatusCode> {
+    return_400_if_bad_recaptcha!(&user_body.token);
+
     let is_valid = user_body.validate().is_ok();
     if !is_valid {
         return Ok(StatusCode::BAD_REQUEST.into_response());
@@ -147,8 +162,14 @@ async fn create_user(
 
 async fn login(
     State(AuthState { pool }): State<AuthState>,
-    Json(UserBody { email, password }): Json<UserBody>,
+    Json(UserBody {
+        email,
+        password,
+        token,
+    }): Json<UserBody>,
 ) -> Result<axum::response::Response, StatusCode> {
+    return_400_if_bad_recaptcha!(&token);
+
     let mut conn = get_conn!(pool)?;
     let user = User::get_by_email(&mut conn, &email)
         .await
@@ -180,6 +201,28 @@ async fn login(
     }
 }
 
+#[derive(Deserialize)]
+struct RecaptchaResponse {
+    success: bool,
+}
+
+async fn verify_recaptcha_token(token: &str) -> Result<bool, Box<dyn std::error::Error>> {
+    let recapthca_secret = std::env::var("RECAPTCHA_SECRET_KEY")?;
+
+    let params = [("secret", recapthca_secret.as_str()), ("response", token)];
+
+    let client = reqwest::Client::new();
+    let res = client
+        .post("https://www.google.com/recaptcha/api/siteverify")
+        .form(&params)
+        .send()
+        .await?;
+
+    let RecaptchaResponse { success } = res.json::<RecaptchaResponse>().await?;
+
+    Ok(success)
+}
+
 #[cfg(test)]
 mod tests {
     use validator::Validate;
@@ -191,7 +234,11 @@ mod tests {
         let email = String::from("not-email");
         let password = String::from("password");
 
-        let body = UserBody { password, email };
+        let body = UserBody {
+            password,
+            email,
+            token: String::new(),
+        };
 
         assert!(body.validate().is_err());
     }
@@ -201,7 +248,11 @@ mod tests {
         let email = String::from("email@mail.co");
         let password = String::from("pass");
 
-        let body = UserBody { password, email };
+        let body = UserBody {
+            password,
+            email,
+            token: String::new(),
+        };
 
         assert!(body.validate().is_err());
     }
@@ -211,7 +262,11 @@ mod tests {
         let email = String::from("email@mail.co");
         let password = String::from("password123");
 
-        let body = UserBody { password, email };
+        let body = UserBody {
+            password,
+            email,
+            token: String::new(),
+        };
 
         assert!(body.validate().is_ok());
     }
