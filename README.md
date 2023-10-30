@@ -12,7 +12,7 @@ This is an implementation of a shared shopping list in rust.
 CREATE TABLE `families` (
   family_id SERIAL PRIMARY KEY,
   `family_name` VARCHAR(255) NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 ```
 
 ### lists
@@ -23,7 +23,7 @@ CREATE TABLE `lists` (
   family_id BIGINT UNSIGNED NOT NULL,
   `name` VARCHAR(255) NOT NULL DEFAULT '',
   FOREIGN KEY (`family_id`) REFERENCES `families`(family_id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 ```
 
 ### Items
@@ -36,7 +36,7 @@ CREATE TABLE list_items (
   amount INT NOT NULL DEFAULT 1,
   FOREIGN KEY (list_id) REFERENCES lists(list_id) ON DELETE CASCADE,
   CONSTRAINT same_item_per_list UNIQUE (list_id, `name`)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 ```
 
 ### Users
@@ -47,7 +47,7 @@ CREATE TABLE users (
   email VARCHAR(320) NOT NULL,
   `password` VARCHAR(255) NOT NULL,
   UNIQUE(email)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 ```
 
 ### Users-Families
