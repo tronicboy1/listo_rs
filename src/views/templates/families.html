@@ -1,0 +1,58 @@
+{% extends "base.html" %} {% block content %}
+<div class="card header"><h1>Family/Group Management</h1></div>
+
+{% for family in families %}
+<listo-family class="card" family-id="{{ family.family_id }}" family-members="{{ family.members | json_encode }}">
+  <h3 class="title">{{family.family_name}}</h3>
+  <template shadowrootmode="open">
+    <link rel="stylesheet" href="/assets/css/listo-list.css" />
+    <link rel="stylesheet" href="/assets/css/style.css" />
+    <slot></slot>
+    <ul>
+      {% for member in family.members %}
+      <li>
+        <span>{{ member.email }}</span
+        ><svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+          <path
+            d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"
+          />
+        </svg>
+      </li>
+      {% endfor %}
+    </ul>
+    <form id="add-new-member" class="add-item-form">
+      <input id="email" name="email" minlength="1" type="email" required placeholder="member@email.com" />
+      <button id="add" type="submit">
+        <svg xmlns="http://www.w3.org/2000/svg" height="48" width="48" viewBox="0, 0, 48, 48">
+          <path d="M22.5 38V25.5H10V22.5H22.5V10H25.5V22.5H38V25.5H25.5V38Z" />
+        </svg>
+      </button>
+    </form>
+    <button style="margin-top: 1rem" type="button" class="delete">
+      <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+        <path
+          d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"
+        />
+      </svg>
+    </button>
+  </template>
+</listo-family>
+
+{% endfor %}
+
+<listo-new-family class="card">
+  <form autocomplete="off">
+    <label for="family-name">Family Name</label>
+    <input id="family-name" name="family-name" minlength="1" type="text" maxlength="33" required />
+    <button id="add" type="submit">
+      <svg xmlns="http://www.w3.org/2000/svg" height="48" width="48" viewBox="0, 0, 48, 48">
+        <path d="M22.5 38V25.5H10V22.5H22.5V10H25.5V22.5H38V25.5H25.5V38Z" />
+      </svg>
+    </button>
+  </form>
+</listo-new-family>
+
+{% include "components/navbar.html" %} {% endblock content %} {% block scripts %}
+<script async type="module" src="/assets/js/listo-family.js"></script>
+<script async type="module" src="/assets/js/listo-new-family.js"></script>
+{% endblock scripts %}˝

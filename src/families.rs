@@ -120,15 +120,25 @@ async fn delete_family(
 
 #[derive(Debug, Deserialize)]
 struct AddMemberBody {
-    user_id: u64,
+    email: String,
 }
 
 async fn add_member(
     State(FamilyRouterState { pool }): State<FamilyRouterState>,
     Path(family_id): Path<u64>,
-    Json(AddMemberBody { user_id }): Json<AddMemberBody>,
+    Json(AddMemberBody { email }): Json<AddMemberBody>,
 ) -> Result<axum::response::Response, StatusCode> {
     let mut conn = get_conn!(pool)?;
+    let user = User::get_by_email(&mut conn, &email)
+        .await
+        .expect("Sql Error");
+
+    if user.is_none() {
+        return Ok(StatusCode::BAD_REQUEST.into_response());
+    }
+
+    let User { user_id, .. } = user.unwrap();
+
     let is_member = Family::is_member(&mut conn, family_id, user_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -162,6 +172,13 @@ async fn remove_member(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if !is_member {
+        return Ok(StatusCode::BAD_REQUEST.into_response());
+    }
+
+    let members = Family::members(&mut conn, family_id)
+        .await
+        .expect("Sql Error");
+    if members.iter().count() == 1 {
         return Ok(StatusCode::BAD_REQUEST.into_response());
     }
 

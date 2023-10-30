@@ -13,7 +13,7 @@ use tera::{Context, Tera};
 use crate::{
     auth::{Claims, JwTokenReaderLayer},
     families::Family,
-    lists::model::{List, Item},
+    lists::model::{Item, List},
 };
 
 pub struct ViewRouter(Router);
@@ -62,7 +62,9 @@ impl ViewRouter {
                             let list = List::get(&mut conn, list_id).await.expect("Sql Error");
 
                             if let Some(mut list) = list {
-                                let list_items = Item::get_by_list(&mut conn, list_id).await.expect("Sql error");
+                                let list_items = Item::get_by_list(&mut conn, list_id)
+                                    .await
+                                    .expect("Sql error");
                                 list.items = Some(list_items);
 
                                 Html(render_list(&state.tera, &list)).into_response()
@@ -84,6 +86,7 @@ impl ViewRouter {
                         Html(html)
                     }),
                 )
+                .route("/families", get(view_families))
                 .layer(JwTokenReaderLayer)
                 .with_state(ViewRouterState::new(pool)),
         )
@@ -96,16 +99,21 @@ impl Into<Router> for ViewRouter {
     }
 }
 
+macro_rules! return_if_not_logged_in {
+    ($claim: expr) => {{
+        if $claim.is_none() {
+            return Redirect::temporary("/login").into_response();
+        }
+
+        $claim.unwrap()
+    }};
+}
+
 async fn lists_view(
     State(state): State<ArcedState>,
     claim: Option<Extension<Claims>>,
 ) -> axum::response::Response {
-    // Redirect if not logged in
-    if claim.is_none() {
-        return Redirect::temporary("/login").into_response();
-    }
-
-    let claim = claim.unwrap();
+    let claim = return_if_not_logged_in!(claim);
 
     // TODO join futures
     let lists: Vec<String> = List::paginate(state.pool.clone(), claim.sub)
@@ -115,8 +123,7 @@ async fn lists_view(
         .map(|list| render_list(&state.tera, list))
         .collect();
 
-    let mut conn = state.pool.get_conn().await.expect("Sql connection error");
-    let families = Family::paginate(&mut conn, claim.sub)
+    let families = Family::paginate(state.pool.clone(), claim.sub, false)
         .await
         .expect("Sql error");
 
@@ -125,6 +132,27 @@ async fn lists_view(
     ctx.insert("families", &families);
 
     let html = state.tera.render("lists.html", &ctx).expect("render error");
+
+    Html(html).into_response()
+}
+
+async fn view_families(
+    State(state): State<ArcedState>,
+    claim: Option<Extension<Claims>>,
+) -> axum::response::Response {
+    let claim = return_if_not_logged_in!(claim);
+
+    let families = Family::paginate(state.pool.clone(), claim.sub, true)
+        .await
+        .expect("Sql Error");
+
+    let mut ctx = Context::new();
+    ctx.insert("families", &families);
+
+    let html = state
+        .tera
+        .render("families.html", &ctx)
+        .expect("Tera template error");
 
     Html(html).into_response()
 }

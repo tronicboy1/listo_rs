@@ -1,14 +1,33 @@
-use mysql_async::{prelude::*, Conn, Params};
-use serde::Serialize;
+use mysql_async::{prelude::*, Conn, Params, Pool};
+use serde::ser::{Serialize, SerializeStruct};
 
 use crate::{find_col_or_err, users::User};
 
 /// A group (family) of users that have access to lists
 /// A family object owns lists, and multiple users belong to a family.
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct Family {
     pub family_id: u64,
     pub family_name: String,
+    pub members: Option<Vec<User>>,
+}
+
+impl Serialize for Family {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let size = if self.members.is_some() { 3 } else { 2 };
+        let mut state = serializer.serialize_struct("Family", size)?;
+
+        state.serialize_field("family_id", &self.family_id)?;
+        state.serialize_field("family_name", &self.family_name)?;
+        if let Some(ref members) = self.members {
+            state.serialize_field("members", members)?;
+        }
+
+        state.end()
+    }
 }
 
 impl Family {
@@ -16,6 +35,7 @@ impl Family {
         Self {
             family_id: 0,
             family_name,
+            members: None,
         }
     }
 
@@ -42,7 +62,13 @@ impl Family {
         conn.exec_drop(stmt, params).await
     }
 
-    pub async fn paginate(conn: &mut Conn, user_id: u64) -> Result<Vec<Self>, mysql_async::Error> {
+    pub async fn paginate(
+        pool: Pool,
+        user_id: u64,
+        load_members: bool,
+    ) -> Result<Vec<Self>, mysql_async::Error> {
+        let mut conn = pool.get_conn().await?;
+
         let stmt = conn
             .prep(
                 "SELECT * FROM families
@@ -52,7 +78,25 @@ impl Family {
             .await?;
 
         let params = Params::Positional(vec![user_id.into()]);
-        conn.exec(stmt, params).await
+        let families: Vec<Family> = conn.exec(stmt, params).await?;
+
+        if load_members {
+            let len = families.len();
+            let family_members: Vec<_> = families
+                .into_iter()
+                .map(move |family| tokio::spawn(family.load_members(pool.clone())))
+                .collect();
+
+            let mut families = Vec::with_capacity(len);
+            for handle in family_members {
+                let fam = handle.await.unwrap()?;
+                families.push(fam);
+            }
+
+            Ok(families)
+        } else {
+            Ok(families)
+        }
     }
 
     pub async fn add_member(
@@ -94,6 +138,16 @@ impl Family {
         conn.exec(stmt, params).await
     }
 
+    async fn load_members(mut self, pool: Pool) -> Result<Self, mysql_async::Error> {
+        let mut conn = pool.get_conn().await?;
+
+        let members = Self::members(&mut conn, self.family_id).await?;
+
+        self.members = Some(members);
+
+        Ok(self)
+    }
+
     pub async fn is_member(
         conn: &mut Conn,
         family_id: u64,
@@ -122,6 +176,7 @@ impl FromRow for Family {
         let family = Family {
             family_id: find_col_or_err!(row, "family_id")?,
             family_name: find_col_or_err!(row, "family_name")?,
+            members: None,
         };
 
         Ok(family)
@@ -158,11 +213,30 @@ mod tests {
 
         Family::add_member(&mut conn, family_id, 1).await.unwrap();
 
-        let families = Family::paginate(&mut conn, 1).await.unwrap();
+        let families = Family::paginate(state.pool.clone(), 1, false)
+            .await
+            .unwrap();
         assert!(families
             .iter()
             .find(|fam| fam.family_id == family_id)
             .is_some());
+
+        Family::destroy(&mut conn, family_id).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn can_paginate_for_user_with_members() {
+        let (state, family_id) = create_family().await;
+        let mut conn = state.pool.get_conn().await.unwrap();
+
+        Family::add_member(&mut conn, family_id, 1).await.unwrap();
+
+        let families = Family::paginate(state.pool.clone(), 1, true).await.unwrap();
+        assert!(families
+            .iter()
+            .find(|fam| fam.family_id == family_id)
+            .is_some());
+        assert!(families.iter().all(|fam| fam.members.is_some()));
 
         Family::destroy(&mut conn, family_id).await.unwrap();
     }
