@@ -8,6 +8,7 @@ use axum::{
 };
 use http::StatusCode;
 use mysql_async::Pool;
+use serde::ser::Serialize;
 use tera::{Context, Tera};
 use unic_langid::LanguageIdentifier;
 
@@ -31,6 +32,17 @@ macro_rules! return_if_not_logged_in {
     }};
 }
 
+struct TeraLanguageIdentifier(LanguageIdentifier);
+
+impl Serialize for TeraLanguageIdentifier {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.0.to_string().as_str())
+    }
+}
+
 macro_rules! unpack_lang {
     ($lang_id: expr, $redirect: expr) => {{
         let lang = $lang_id.parse::<LanguageIdentifier>();
@@ -43,7 +55,7 @@ macro_rules! unpack_lang {
             return Redirect::permanent($redirect).into_response();
         }
 
-        lang
+        TeraLanguageIdentifier(lang)
     }};
 }
 
@@ -161,7 +173,7 @@ async fn lists_view(
     let mut ctx = Context::new();
     ctx.insert("lists", &lists);
     ctx.insert("families", &families);
-    ctx.insert("lang", &lang.to_string());
+    ctx.insert("lang", &lang);
 
     let html = state.tera.render("lists.html", &ctx).expect("render error");
 
