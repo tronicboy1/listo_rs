@@ -670,7 +670,7 @@ class lt extends HTMLElement {
   }
   connectedCallback() {
     this.socket.pipe(G({ count: 5, delay: 2e3 }), $(this._teardown)).subscribe((e) => {
-      console.log("to refresh: ", e), window.dispatchEvent(new CustomEvent("update-list", { detail: e }));
+      window.dispatchEvent(new CustomEvent("update-list", { detail: e }));
     });
   }
   disconnectedCallback() {

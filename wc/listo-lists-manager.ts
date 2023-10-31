@@ -19,7 +19,6 @@ export class ListoListManager extends HTMLElement {
 
   connectedCallback() {
     this.socket.pipe(retry({count: 5, delay: 2000}), takeUntil(this._teardown)).subscribe(message => {
-      console.log("to refresh: ", message);
       window.dispatchEvent(new CustomEvent("update-list", {detail: message}));
     });
   }

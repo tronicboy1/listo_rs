@@ -1,6 +1,6 @@
 //@ts-check
 import {LitElement, css, html} from "lit";
-import {Subject, mergeMap, take, takeUntil, tap} from "rxjs";
+import {Subject, mergeMap, switchMap, take, takeUntil, tap} from "rxjs";
 import {filterForDoubleClick} from "@tronicboy/rxjs-operators";
 
 export const tagName = "listo-list";
@@ -32,6 +32,8 @@ export class ListoList extends LitElement {
     this._deleteListClick = new Subject();
     /** @type {Subject<void>} */
     this._teardown = new Subject();
+    /** @type {Subject<void>} */
+    this._refresh = new Subject();
   }
 
   connectedCallback() {
@@ -54,8 +56,8 @@ export class ListoList extends LitElement {
             this._deletingIds.delete(itemId);
           })
         ),
-        mergeMap(() => this.refreshList()),
         tap(() => {
+          this._refresh.next();
           this._loading = false;
         })
       )
@@ -77,6 +79,13 @@ export class ListoList extends LitElement {
           this.remove();
         }
       });
+
+    this._refresh
+      .pipe(
+        takeUntil(this._teardown),
+        switchMap(() => this.refreshList())
+      )
+      .subscribe();
   }
 
   disconnectedCallback() {
@@ -95,7 +104,7 @@ export class ListoList extends LitElement {
       return;
     }
 
-    this.refreshList();
+    this._refresh.next();
   };
 
   createRenderRoot() {
@@ -128,7 +137,7 @@ export class ListoList extends LitElement {
     })
       .then(() => {
         this.form.reset();
-        return this.refreshList();
+        this._refresh.next();
       })
       .finally(() => (this._loading = false));
   };
