@@ -9,7 +9,7 @@
 <listo-new-list>
   <form class="card" slot="form" autocomplete="off">
     {% if families | length > 1 %}
-    <label for="family-id">List Family</label>
+    <label for="family-id">{{ fluent(key="list-family", lang=lang) }}</label>
     <select name="family-id" id="family-id">
       {% for family in families %}
       <option value="{{ family.family_id }}">{{ family.family_name }}</option>
@@ -18,7 +18,7 @@
     {% else %}
     <input type="hidden" name="family-id" value="{{ families[0].family_id }}" />
     {% endif %}
-    <label for="list-name">List Name</label>
+    <label for="list-name">{{ fluent(key="list-name", lang=lang) }}</label>
     <input id="list-name" name="list-name" minlength="1" type="text" maxlength="33" required />
     <button id="add" type="submit" aria-label="Add list">
       <svg xmlns="http://www.w3.org/2000/svg" height="48" width="48" viewBox="0, 0, 48, 48">
