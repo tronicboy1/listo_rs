@@ -1,17 +1,35 @@
-import {LitElement} from "lit";
+import {LitElement, html} from "lit";
 
 export const tagName = "listo-new-list";
 
 export class ListoNewList extends LitElement {
+  static properties = {
+    _open: {state: true},
+  };
+
   constructor() {
     super();
     this._form = /** @type {HTMLFormElement} */ (this.querySelector("form"));
     this._listOfListsRoot = /** @type {HTMLUListElement} */ (document.querySelector("ul#list-of-lists"));
     this._loading = false;
+    this._open = false;
   }
 
   connectedCallback() {
+    super.connectedCallback();
+
     this._form.addEventListener("submit", this.handleSubmit);
+  }
+
+  render() {
+    return html` <link rel="stylesheet" href="/assets/css/listo-new-list.css" />
+      ${this._open
+        ? html`<slot name="form"></slot>`
+        : html`<div id="open-add-list" slot="open-button" @click=${() => (this._open = !this._open)}>
+            <svg xmlns="http://www.w3.org/2000/svg" height="48" width="48" viewBox="0, 0, 48, 48">
+              <path d="M22.5 38V25.5H10V22.5H22.5V10H25.5V22.5H38V25.5H25.5V38Z" />
+            </svg>
+          </div>`}`;
   }
 
   /**
@@ -59,9 +77,20 @@ export class ListoNewList extends LitElement {
             this._listOfListsRoot.append(li);
           })
       )
-      .then(() => this._form.reset())
+      .then(() => {
+        this._form.reset();
+        this._open = false;
+      })
       .finally(() => (this._loading = false));
   };
+
+  createRenderRoot() {
+    const root = /** @type {ShadowRoot} */ (this.shadowRoot);
+    // Clear SSR
+    root.innerHTML = "";
+
+    return root;
+  }
 }
 
 if (!customElements.get(tagName)) {
