@@ -16,6 +16,16 @@ use crate::{
     lists::model::{Item, List},
 };
 
+macro_rules! return_if_not_logged_in {
+    ($claim: expr) => {{
+        if $claim.is_none() {
+            return Redirect::temporary("/login").into_response();
+        }
+
+        $claim.unwrap()
+    }};
+}
+
 pub struct ViewRouter(Router);
 
 type ArcedState = Arc<ViewRouterState>;
@@ -57,7 +67,11 @@ impl ViewRouter {
                 .route(
                     "/lists/:list_id",
                     get(
-                        |State(state): State<ArcedState>, Path(list_id): Path<u64>| async move {
+                        |State(state): State<ArcedState>,
+                         claim: Option<Extension<Claims>>,
+                         Path(list_id): Path<u64>| async move {
+                            let claim = return_if_not_logged_in!(claim);
+
                             let mut conn = state.pool.get_conn().await.expect("Sql Error");
                             let list = List::get(&mut conn, list_id).await.expect("Sql Error");
 
@@ -67,7 +81,7 @@ impl ViewRouter {
                                     .expect("Sql error");
                                 list.items = Some(list_items);
 
-                                Html(render_list(&state.tera, &list)).into_response()
+                                Html(render_list(&state.tera, &list, claim.sub)).into_response()
                             } else {
                                 StatusCode::NOT_FOUND.into_response()
                             }
@@ -99,16 +113,6 @@ impl Into<Router> for ViewRouter {
     }
 }
 
-macro_rules! return_if_not_logged_in {
-    ($claim: expr) => {{
-        if $claim.is_none() {
-            return Redirect::temporary("/login").into_response();
-        }
-
-        $claim.unwrap()
-    }};
-}
-
 async fn lists_view(
     State(state): State<ArcedState>,
     claim: Option<Extension<Claims>>,
@@ -120,7 +124,7 @@ async fn lists_view(
         .await
         .expect("Pagination failed")
         .iter()
-        .map(|list| render_list(&state.tera, list))
+        .map(|list| render_list(&state.tera, list, claim.sub))
         .collect();
 
     let families = Family::paginate(state.pool.clone(), claim.sub, false)
@@ -158,9 +162,10 @@ async fn view_families(
 }
 
 /// Renders a list into a listo-list web component HTML template
-fn render_list(tera: &Tera, list: &List) -> String {
+fn render_list(tera: &Tera, list: &List, user_id: u64) -> String {
     let mut ctx = Context::new();
     ctx.insert("list", list);
+    ctx.insert("user_id", &user_id);
 
     tera.render("components/listo-list.html", &ctx)
         .expect("List template error")

@@ -9,12 +9,13 @@ use axum::{
 use http::StatusCode;
 use mysql_async::Pool;
 use serde::Deserialize;
+use tokio::sync::broadcast::Sender;
 use tower::ServiceBuilder;
 
 use crate::{
     auth::{AuthGuardLayer, Claims, JwTokenReaderLayer},
     families::Family,
-    get_conn,
+    get_conn, map_internal_error, ItemChangeMessage,
 };
 
 use self::{
@@ -29,6 +30,7 @@ pub struct ListRouter(Router);
 
 struct ListState {
     pool: Pool,
+    new_item_tx: Sender<ItemChangeMessage>,
 }
 
 impl Into<Router> for ListRouter {
@@ -38,8 +40,8 @@ impl Into<Router> for ListRouter {
 }
 
 impl ListRouter {
-    pub fn new(pool: Pool) -> Self {
-        let state = ListState::new(pool);
+    pub fn new(pool: Pool, new_item_tx: Sender<ItemChangeMessage>) -> Self {
+        let state = ListState::new(pool, new_item_tx);
         Self(
             Router::new()
                 .route("/", get(get_lists))
@@ -61,8 +63,8 @@ impl ListRouter {
 }
 
 impl ListState {
-    fn new(pool: Pool) -> Arc<Self> {
-        Arc::new(Self { pool: pool.clone() })
+    fn new(pool: Pool, new_item_tx: Sender<ItemChangeMessage>) -> Arc<Self> {
+        Arc::new(Self { pool, new_item_tx })
     }
 }
 
@@ -171,21 +173,33 @@ struct ItemParams {
 async fn add_item(
     State(state): State<Arc<ListState>>,
     Path(list_id): Path<u64>,
+    Extension(user): Extension<Claims>,
     Json(ItemParams { name }): Json<ItemParams>,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, StatusCode> {
     let item = Item::new(list_id, name);
 
     let mut conn = get_conn!(state.pool)?;
     item.insert(&mut conn).await.map_err(|err| {
         dbg!(err);
         StatusCode::INTERNAL_SERVER_ERROR
-    })
+    })?;
+
+    state
+        .new_item_tx
+        .send(ItemChangeMessage {
+            list_id,
+            user_id: user.sub,
+        })
+        .unwrap();
+
+    Ok(())
 }
 
 async fn delete_item(
     State(state): State<Arc<ListState>>,
-    Path((_, item_id)): Path<(u64, u64)>,
-) -> impl IntoResponse {
+    Extension(user): Extension<Claims>,
+    Path((list_id, item_id)): Path<(u64, u64)>,
+) -> Result<impl IntoResponse, StatusCode> {
     let mut conn = get_conn!(state.pool)?;
     let item = Item::get(&mut conn, item_id)
         .await
@@ -195,8 +209,15 @@ async fn delete_item(
         return Ok(StatusCode::NOT_FOUND);
     }
 
-    match Item::delete(&mut conn, item_id).await {
-        Ok(_) => Ok(StatusCode::OK),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
+    map_internal_error!(Item::delete(&mut conn, item_id).await)?;
+
+    state
+        .new_item_tx
+        .send(ItemChangeMessage {
+            user_id: user.sub,
+            list_id,
+        })
+        .unwrap();
+
+    Ok(StatusCode::OK)
 }

@@ -6,6 +6,6 @@
     "strict": true,
     "checkJs": true
   },
-  "include": ["assets/js/*"],
+  "include": ["assets/js/*", "wc/*"],
   "exclude": ["node_modules"]
 }

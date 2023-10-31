@@ -1,5 +1,5 @@
 <li>
-  <listo-list class="card" list-id="{{ list.list_id }}" list-items="{{ list.items | json_encode }}">
+  <listo-list class="card" list-id="{{ list.list_id }}" list-items="{{ list.items | json_encode }}" user-id="{{ user_id }}">
     <div slot="list-name" class="title">
       <h3>{{ list.name }}</h3>
     </div>

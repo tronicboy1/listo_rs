@@ -10,6 +10,7 @@ export class ListoList extends LitElement {
     //@ts-ignore
     _items: {type: Array, attribute: "list-items", converter: text => JSON.parse(text)},
     listId: {type: Number, attribute: "list-id"},
+    userId: {type: Number, attribute: "user-id"},
     _loading: {state: true},
     _deletingIds: {state: true},
   };
@@ -19,8 +20,10 @@ export class ListoList extends LitElement {
     /** @type {any[]} */
     this._items = [];
     this.listId = 0;
+    this.userId = 0;
     this.form = /** @type {HTMLFormElement} */ (this.shadowRoot?.querySelector("form"));
     this._loading = false;
+    this._refreshing = false;
     this._deletingIds = new Set();
     this._first_render = true;
     /** @type {Subject<number>} */
@@ -36,6 +39,7 @@ export class ListoList extends LitElement {
 
     this.form.addEventListener("submit", this.handleFormSubmit);
     document.addEventListener("visibilitychange", this.handleVisibility);
+    window.addEventListener("update-list", this.handleUpdateList);
 
     this._deleteClick
       .pipe(
@@ -79,7 +83,20 @@ export class ListoList extends LitElement {
     super.disconnectedCallback();
     this._teardown.next();
     document.removeEventListener("visibilitychange", this.handleVisibility);
+    window.removeEventListener("update-list", this.handleUpdateList);
   }
+
+  /**
+   *
+   * @param {CustomEvent<import("../../wc/listo-lists-manager").ItemChangeMessage>} event
+   */
+  handleUpdateList = ({detail}) => {
+    if (detail.list_id !== this.listId || this.userId === detail.user_id || this._refreshing) {
+      return;
+    }
+
+    this.refreshList();
+  };
 
   createRenderRoot() {
     const renderRoot = /** @type {HTMLUListElement} */ (this.querySelector("ul"));
@@ -123,11 +140,15 @@ export class ListoList extends LitElement {
   };
 
   refreshList() {
+    this._refreshing = true;
     return fetch(`/api/v1/lists/${this.listId}/items`)
       .then(res => res.json())
       .catch(() => this.remove())
       .then(items => {
         this._items = items;
+      })
+      .finally(() => {
+        this._refreshing = false;
       });
   }
 

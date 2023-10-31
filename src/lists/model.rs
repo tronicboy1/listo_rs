@@ -172,7 +172,7 @@ impl Item {
         list_id: u64,
     ) -> Result<Vec<Item>, mysql_async::Error> {
         let stmt = conn
-            .prep("SELECT * FROM list_items WHERE list_id = ?;")
+            .prep("SELECT * FROM list_items WHERE list_id = ? ORDER BY item_id;")
             .await?;
 
         conn.exec(stmt, vec![list_id]).await

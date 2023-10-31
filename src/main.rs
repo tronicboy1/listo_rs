@@ -2,8 +2,13 @@ use std::net::SocketAddr;
 
 use axum::{routing::get, Router};
 use listo_rs::{
-    auth::AuthRouter, families::FamilyRouter, images::ImagesRouter, lists::ListRouter,
-    views::ViewRouter, ws::handle_ws_req, AppState,
+    auth::{AuthRouter, JwTokenReaderLayer},
+    families::FamilyRouter,
+    images::ImagesRouter,
+    lists::ListRouter,
+    views::ViewRouter,
+    ws::handle_ws_req,
+    AppState,
 };
 use tower_http::services::ServeDir;
 
@@ -15,16 +20,21 @@ async fn main() {
 
     // build our application with a single route
     let app = Router::new()
+        .route("/ws", get(handle_ws_req))
+        .route_layer(JwTokenReaderLayer)
+        .with_state(state.clone())
         .merge(ViewRouter::new(state.pool.clone()))
         .nest("/api/v1/auth", AuthRouter::new(state.pool.clone()).into())
         .nest("/images", ImagesRouter::new().into())
-        .nest("/api/v1/lists", ListRouter::new(state.pool.clone()).into())
+        .nest(
+            "/api/v1/lists",
+            ListRouter::new(state.pool.clone(), state.new_item_tx.clone()).into(),
+        )
         .nest(
             "/api/v1/families",
             FamilyRouter::new(state.pool.clone()).into(),
         )
-        .nest_service("/assets", serve_dir)
-        .route("/ws", get(handle_ws_req));
+        .nest_service("/assets", serve_dir);
 
     let port: u16 = std::env::var("PORT")
         .unwrap_or(String::from("3000"))
