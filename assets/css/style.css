@@ -11,7 +11,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: white;
   margin: 0 0 12vh 0;
-  touch-action: manipulation;
+  touch-action: pan-y;
 }
 
 @media (prefers-color-scheme: dark) {

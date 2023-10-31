@@ -19,6 +19,7 @@ export class ListoNewList extends LitElement {
     super.connectedCallback();
 
     this._form.addEventListener("submit", this.handleSubmit);
+    this._form.addEventListener("blur", () => (this._open = false));
   }
 
   render() {
