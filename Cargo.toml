@@ -9,8 +9,10 @@ edition = "2021"
 argon2 = "0.5.2"
 axum = { version = "0.6.20", features = ["multipart", "ws"]}
 cookie = "0.18.0"
+fluent = "0.16.0"
 futures = "0.3.28"
 http = "0.2.9"
+intl-memoizer = "0.5.1"
 jsonwebtoken = "9.1.0"
 mysql_async = "0.32.2"
 reqwest = { version = "0.11.22", features = ["json"] }
@@ -20,4 +22,5 @@ tera = "1.19.1"
 tokio = { version = "1.33.0", features = ["full"] }
 tower = "0.4.13"
 tower-http = { version = "0.4.4", features = ["fs"] }
+unic-langid = { version = "0.9.1", features = ["unic-langid-macros"] }
 validator = { version = "0.16.1", features = ["derive"] }

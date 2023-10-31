@@ -1,4 +1,5 @@
 {% extends "base.html" %} {% block content %}
+<h1>{{ fluent(key="hello-world", lang="ja") }}</h1>
 <listo-lists-manager>
   <ul class="list-of-lists" id="list-of-lists">
     {% for list in lists %} {{ list | safe }} {% endfor %}

@@ -164,6 +164,11 @@ esbuild@^0.18.10:
     "@esbuild/win32-ia32" "0.18.20"
     "@esbuild/win32-x64" "0.18.20"
 
+fluent@^0.13.0:
+  version "0.13.0"
+  resolved "https://registry.yarnpkg.com/fluent/-/fluent-0.13.0.tgz#d1bd14b688d29af079564341c28cb0c1e9ccc2d0"
+  integrity sha512-veZ4VyzNiBnRAfUagBpXWVyOHPns7z00UtuYWoqWjlogFgHGzDo3b2v3+gNkxxyd44uPP6NBUkgLaHlC6sQm5g==
+
 fsevents@~2.3.2:
   version "2.3.3"
   resolved "https://registry.yarnpkg.com/fsevents/-/fsevents-2.3.3.tgz#cac6407785d03675a2a5e1a5305c697b347d90d6"

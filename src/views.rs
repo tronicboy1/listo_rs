@@ -10,11 +10,15 @@ use http::StatusCode;
 use mysql_async::Pool;
 use tera::{Context, Tera};
 
+mod i18n;
+
 use crate::{
     auth::{Claims, JwTokenReaderLayer},
     families::Family,
     lists::model::{Item, List},
 };
+
+use self::i18n::Localizer;
 
 macro_rules! return_if_not_logged_in {
     ($claim: expr) => {{
@@ -38,7 +42,9 @@ struct ViewRouterState {
 
 impl ViewRouterState {
     fn new(pool: Pool) -> Arc<Self> {
-        let tera = Tera::new("src/views/templates/**/*").expect("tera parsing error");
+        let mut tera = Tera::new("src/views/templates/**/*").expect("tera parsing error");
+        let localizer = Localizer::new();
+        tera.register_function("fluent", localizer);
 
         Arc::new(Self { pool, tera })
     }
@@ -134,6 +140,7 @@ async fn lists_view(
     let mut ctx = Context::new();
     ctx.insert("lists", &lists);
     ctx.insert("families", &families);
+    ctx.insert("lang", "en-US");
 
     let html = state.tera.render("lists.html", &ctx).expect("render error");
 
