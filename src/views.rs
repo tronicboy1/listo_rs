@@ -9,6 +9,7 @@ use axum::{
 use http::StatusCode;
 use mysql_async::Pool;
 use tera::{Context, Tera};
+use unic_langid::LanguageIdentifier;
 
 mod i18n;
 
@@ -27,6 +28,22 @@ macro_rules! return_if_not_logged_in {
         }
 
         $claim.unwrap()
+    }};
+}
+
+macro_rules! unpack_lang {
+    ($lang_id: expr, $redirect: expr) => {{
+        let lang = $lang_id.parse::<LanguageIdentifier>();
+        if lang.is_err() {
+            return StatusCode::NOT_FOUND.into_response();
+        }
+        let lang = lang.unwrap();
+
+        if !i18n::supported(&lang) {
+            return Redirect::permanent($redirect).into_response();
+        }
+
+        lang
     }};
 }
 
@@ -69,7 +86,8 @@ impl ViewRouter {
                     }),
                 )
                 .route("/", get(|| async { Redirect::to("/lists") }))
-                .route("/lists", get(lists_view))
+                .route("/:lang/lists", get(lists_view))
+                .route("/lists", get(|| async { Redirect::permanent("/en/lists") }))
                 .route(
                     "/lists/:list_id",
                     get(
@@ -122,8 +140,11 @@ impl Into<Router> for ViewRouter {
 async fn lists_view(
     State(state): State<ArcedState>,
     claim: Option<Extension<Claims>>,
+    Path(lang_id): Path<String>,
 ) -> axum::response::Response {
     let claim = return_if_not_logged_in!(claim);
+
+    let lang = unpack_lang!(lang_id, "/en/lists");
 
     // TODO join futures
     let lists: Vec<String> = List::paginate(state.pool.clone(), claim.sub)
@@ -140,7 +161,7 @@ async fn lists_view(
     let mut ctx = Context::new();
     ctx.insert("lists", &lists);
     ctx.insert("families", &families);
-    ctx.insert("lang", "en-US");
+    ctx.insert("lang", &lang.to_string());
 
     let html = state.tera.render("lists.html", &ctx).expect("render error");
 

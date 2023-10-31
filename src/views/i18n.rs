@@ -85,3 +85,7 @@ fn init() -> Locales {
 
     locales
 }
+
+pub fn supported(lang: &LanguageIdentifier) -> bool {
+    lang == &ENGLISH || lang == &JAPANESE
+}

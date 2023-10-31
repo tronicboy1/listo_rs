@@ -21,8 +21,8 @@
       <link rel="stylesheet" href="/assets/css/variables.css" />
       <slot name="list-name"></slot>
       <form autocomplete="off" class="add-item-form">
-        <input type="text" name="name" id="name" minlength="1" maxlength="33" required />
-        <button id="add" type="submit">
+        <input type="text" name="name" id="name" minlength="1" maxlength="33" required aria-label="Name of item to add to list" />
+        <button id="add" type="submit" aria-label="Add item to list">
           <svg xmlns="http://www.w3.org/2000/svg" height="48" width="48" viewBox="0, 0, 48, 48">
             <path d="M22.5 38V25.5H10V22.5H22.5V10H25.5V22.5H38V25.5H25.5V38Z" />
           </svg>
