@@ -1,9 +1,9 @@
 use std::net::SocketAddr;
 
-use axum::Router;
+use axum::{routing::get, Router};
 use listo_rs::{
     auth::AuthRouter, families::FamilyRouter, images::ImagesRouter, lists::ListRouter,
-    views::ViewRouter, AppState,
+    views::ViewRouter, ws::handle_ws_req, AppState,
 };
 use tower_http::services::ServeDir;
 
@@ -23,7 +23,8 @@ async fn main() {
             "/api/v1/families",
             FamilyRouter::new(state.pool.clone()).into(),
         )
-        .nest_service("/assets", serve_dir);
+        .nest_service("/assets", serve_dir)
+        .route("/ws", get(handle_ws_req));
 
     let port: u16 = std::env::var("PORT")
         .unwrap_or(String::from("3000"))

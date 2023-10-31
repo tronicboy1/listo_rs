@@ -1,7 +1,9 @@
 {% extends "base.html" %} {% block content %}
-<ul class="list-of-lists" id="list-of-lists">
-  {% for list in lists %} {{ list | safe }} {% endfor %}
-</ul>
+<listo-lists-manager>
+  <ul class="list-of-lists" id="list-of-lists">
+    {% for list in lists %} {{ list | safe }} {% endfor %}
+  </ul>
+</listo-lists-manager>
 
 {% if families | length > 0 %}
 <listo-new-list>
@@ -25,7 +27,7 @@
     </button>
   </form>
   <template shadowrootmode="open">
-    <link rel="stylesheet" href="/assets/css/listo-new-list.css">
+    <link rel="stylesheet" href="/assets/css/listo-new-list.css" />
     <div id="open-add-list" slot="open-button">
       <svg xmlns="http://www.w3.org/2000/svg" height="48" width="48" viewBox="0, 0, 48, 48">
         <path d="M22.5 38V25.5H10V22.5H22.5V10H25.5V22.5H38V25.5H25.5V38Z" />
@@ -36,4 +38,5 @@
 {% endif %} {% include "components/navbar.html" %} {% endblock content %} {% block scripts %}
 <script defer type="module" src="/assets/js/listo-list.js"></script>
 <script defer type="module" src="/assets/js/listo-new-list.js"></script>
+<script async type="module" src="/assets/js/build/listo-lists-manager.mjs"></script>
 {% endblock scripts %}

@@ -14,6 +14,7 @@ pub mod lists;
 pub(crate) mod test_utils;
 pub mod users;
 pub mod views;
+pub mod ws;
 
 pub struct AppState {
     pub origin: String,
