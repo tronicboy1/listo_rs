@@ -54,25 +54,26 @@ impl ViewRouter {
     pub fn new(pool: Pool) -> Self {
         Self(
             Router::new()
-                .route(
-                    "/upload",
-                    get(|State(state): State<ArcedState>| async move {
-                        let mut context = Context::new();
-                        context.insert("name", "austin");
+                // Left for reference, not in use 20231101
+                // .route(
+                //     "/:lang/upload",
+                //     get(|State(state): State<ArcedState>| async move {
+                //         let mut context = Context::new();
+                //         context.insert("name", "austin");
 
-                        let html = state
-                            .tera
-                            .render("upload.html", &context)
-                            .expect("render error");
+                //         let html = state
+                //             .tera
+                //             .render("upload.html", &context)
+                //             .expect("render error");
 
-                        Html(html)
-                    }),
-                )
-                .route("/", get(|| async { Redirect::to("/lists") }))
+                //         Html(html)
+                //     }),
+                // )
+                .route("/:lang", get(|| async { Redirect::to("/lists") }))
+                .route("/:lang/", get(|| async { Redirect::to("/lists") }))
                 .route("/:lang/lists", get(lists_view))
-                .route("/lists", get(|| async { Redirect::permanent("/en/lists") }))
                 .route(
-                    "/lists/:list_id",
+                    "/:lang/lists/:list_id",
                     get(
                         |State(state): State<ArcedState>,
                          claim: Option<Extension<Claims>>,
@@ -96,7 +97,7 @@ impl ViewRouter {
                     ),
                 )
                 .route(
-                    "/login",
+                    "/:lang/login",
                     get(|State(state): State<ArcedState>| async move {
                         let ctx = Context::new();
                         let html = state
@@ -107,7 +108,7 @@ impl ViewRouter {
                         Html(html)
                     }),
                 )
-                .route("/families", get(view_families))
+                .route("/:lang/families", get(view_families))
                 .layer(
                     tower::ServiceBuilder::new()
                         .layer(LanguageIdentifierExtractorLayer)

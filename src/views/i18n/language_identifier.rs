@@ -1,4 +1,4 @@
-use axum::response::Response;
+use axum::response::{IntoResponse, Redirect, Response};
 use http::{HeaderMap, Request, Uri};
 use serde::ser::Serialize;
 use std::future::Future;
@@ -6,7 +6,7 @@ use std::pin::Pin;
 use tower::{Layer, Service};
 use unic_langid::LanguageIdentifier;
 
-use super::supported;
+use super::{supported, ENGLISH};
 
 /// Newtype of unic_langid::LanguageIdentifier to allow serialization in use with Tera
 #[derive(Debug, Clone)]
@@ -55,6 +55,7 @@ where
     fn call(&mut self, mut req: Request<B>) -> Self::Future {
         let lang_ident = lang_code_from_uri(req.uri());
 
+        // Redirect to supported language if current is not supported
         if let Some(lang_ident) = lang_ident {
             // Add language ident for processing in handler
             let ext = req.extensions_mut();
@@ -64,7 +65,13 @@ where
         } else {
             let headers = req.headers();
 
-            todo!()
+            let ident = lang_code_from_headers(headers);
+
+            let target_lang = ident.unwrap_or(TeraLanguageIdentifier(ENGLISH));
+
+            let redirect_uri = target_lang.language.to_string() + req.uri().path();
+
+            Box::pin(async move { Ok(Redirect::permanent(&redirect_uri).into_response()) })
         }
     }
 }
@@ -93,15 +100,27 @@ fn lang_code_from_uri(uri: &Uri) -> Option<TeraLanguageIdentifier> {
         .map(|ident| TeraLanguageIdentifier(ident))
 }
 
+/// Extracts language code from Accept-Language header if available and asks for at least one supported language
 fn lang_code_from_headers(headers: &HeaderMap) -> Option<TeraLanguageIdentifier> {
     let accept_lang = headers
         .get("Accept-Language")
         .and_then(|val| val.to_str().ok())?;
 
-    accept_lang
+    let lang_ident = accept_lang
         .parse::<LanguageIdentifier>()
         .ok()
-        .map(|ident| TeraLanguageIdentifier(ident))
+        .and_then(|ident| if supported(&ident) { Some(ident) } else { None })
+        .or_else(|| {
+            accept_lang
+                .split(',')
+                .filter(|part| !part.is_empty())
+                // Strip the quality value
+                .map(|part| part.find(|c| c == ';').map(|i| &part[..i]).unwrap_or(part))
+                .filter_map(|ident_str| ident_str.parse::<LanguageIdentifier>().ok())
+                .find(|ident| supported(ident))
+        });
+
+    lang_ident.map(|ident| TeraLanguageIdentifier(ident))
 }
 
 #[cfg(test)]
@@ -136,22 +155,22 @@ mod tests {
     #[test]
     fn can_extract_lang_header_single() {
         let mut headers = HeaderMap::new();
-        headers.insert("Accept-Language", HeaderValue::from_static("de"));
+        headers.insert("Accept-Language", HeaderValue::from_static("en"));
 
         let ident = lang_code_from_headers(&headers).unwrap();
 
-        let target = "de".parse::<LanguageIdentifier>().unwrap();
+        let target = "en".parse::<LanguageIdentifier>().unwrap();
         assert_eq!(ident.deref(), &target)
     }
 
     #[test]
     fn can_extract_lang_header_compound() {
         let mut headers = HeaderMap::new();
-        headers.insert("Accept-Language", HeaderValue::from_static("de-CH"));
+        headers.insert("Accept-Language", HeaderValue::from_static("en-US"));
 
         let ident = lang_code_from_headers(&headers).unwrap();
 
-        let target = "de-CH".parse::<LanguageIdentifier>().unwrap();
+        let target = "en-US".parse::<LanguageIdentifier>().unwrap();
         assert_eq!(ident.deref(), &target)
     }
 
@@ -165,7 +184,7 @@ mod tests {
 
         let ident = lang_code_from_headers(&headers).unwrap();
 
-        let target = "en".parse::<LanguageIdentifier>().unwrap();
+        let target = "en-US".parse::<LanguageIdentifier>().unwrap();
         assert_eq!(ident.deref(), &target)
     }
 
