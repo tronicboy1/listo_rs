@@ -1,11 +1,16 @@
 <li>
-  <listo-list class="card" list-id="{{ list.list_id }}" list-items="{{ list.items | json_encode }}" user-id="{{ user_id }}">
+  <listo-list
+    class="card"
+    list-id="{{ list.list_id }}"
+    list-items="{{ list.items | json_encode }}"
+    user-id="{{ user_id }}"
+  >
     <div slot="list-name" class="title">
       <h3>{{ list.name }}</h3>
     </div>
     <ul>
       {% if list.items | length < 1 %}
-      <button type="button" class="delete" aria-label="delete this list">
+      <button type="button" class="delete" aria-label="{{ fluent(key="listo-list-delete-button", lang=lang) }}">
         <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
           <path
             d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"
@@ -21,7 +26,15 @@
       <link rel="stylesheet" href="/assets/css/variables.css" />
       <slot name="list-name"></slot>
       <form autocomplete="off" class="add-item-form">
-        <input type="text" name="name" id="name" minlength="1" maxlength="33" required aria-label="Name of item to add to list" />
+        <input
+          type="text"
+          name="name"
+          id="name"
+          minlength="1"
+          maxlength="33"
+          required
+          aria-label="Name of item to add to list"
+        />
         <button id="add" type="submit" aria-label="Add item to list">
           <svg xmlns="http://www.w3.org/2000/svg" height="48" width="48" viewBox="0, 0, 48, 48">
             <path d="M22.5 38V25.5H10V22.5H22.5V10H25.5V22.5H38V25.5H25.5V38Z" />

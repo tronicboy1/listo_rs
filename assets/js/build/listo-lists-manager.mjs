@@ -1,4 +1,4 @@
-import { fromEvent as $, startWith as q, map as G, switchMap as Q, of as X, Subject as Z, tap as N, retry as tt, takeUntil as et } from "rxjs";
+import { fromEvent as $, startWith as q, map as G, switchMap as Q, of as X, Subject as Z, retry as N, takeUntil as tt } from "rxjs";
 var P = function(r, e) {
   return P = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(t, n) {
     t.__proto__ = n;
@@ -204,7 +204,7 @@ var Y = {
   },
   delegate: void 0
 };
-function rt(r) {
+function et(r) {
   I.setTimeout(function() {
     throw r;
   });
@@ -218,7 +218,7 @@ var F = function(r) {
   b(e, r);
   function e(t) {
     var n = r.call(this) || this;
-    return n.isStopped = !1, t ? (n.destination = t, H(t) && t.add(n)) : n.destination = st, n;
+    return n.isStopped = !1, t ? (n.destination = t, H(t) && t.add(n)) : n.destination = ot, n;
   }
   return e.create = function(t, n, i) {
     return new U(t, n, i);
@@ -245,11 +245,11 @@ var F = function(r) {
       this.unsubscribe();
     }
   }, e;
-}(_), nt = Function.prototype.bind;
+}(_), rt = Function.prototype.bind;
 function x(r, e) {
-  return nt.call(r, e);
+  return rt.call(r, e);
 }
-var it = function() {
+var nt = function() {
   function r(e) {
     this.partialObserver = e;
   }
@@ -300,29 +300,29 @@ var it = function() {
         complete: t.complete && x(t.complete, u)
       }) : s = t;
     }
-    return o.destination = new it(s), o;
+    return o.destination = new nt(s), o;
   }
   return e;
 }(F);
 function S(r) {
-  rt(r);
+  et(r);
 }
-function ot(r) {
+function it(r) {
   throw r;
 }
-var st = {
+var ot = {
   closed: !0,
   next: R,
-  error: ot,
+  error: it,
   complete: R
-}, ut = function() {
+}, st = function() {
   return typeof Symbol == "function" && Symbol.observable || "@@observable";
 }();
-function ct(r) {
+function ut(r) {
   return r;
 }
-function at(r) {
-  return r.length === 0 ? ct : r.length === 1 ? r[0] : function(t) {
+function ct(r) {
+  return r.length === 0 ? ut : r.length === 1 ? r[0] : function(t) {
     return r.reduce(function(n, i) {
       return i(n);
     }, t);
@@ -336,7 +336,7 @@ var k = function() {
     var t = new r();
     return t.source = this, t.operator = e, t;
   }, r.prototype.subscribe = function(e, t, n) {
-    var i = this, o = lt(e) ? e : new U(e, t, n);
+    var i = this, o = ft(e) ? e : new U(e, t, n);
     return w(function() {
       var s = i, u = s.operator, c = s.source;
       o.add(u ? u.call(o, c) : c ? i._subscribe(o) : i._trySubscribe(o));
@@ -366,12 +366,12 @@ var k = function() {
   }, r.prototype._subscribe = function(e) {
     var t;
     return (t = this.source) === null || t === void 0 ? void 0 : t.subscribe(e);
-  }, r.prototype[ut] = function() {
+  }, r.prototype[st] = function() {
     return this;
   }, r.prototype.pipe = function() {
     for (var e = [], t = 0; t < arguments.length; t++)
       e[t] = arguments[t];
-    return at(e)(this);
+    return ct(e)(this);
   }, r.prototype.toPromise = function(e) {
     var t = this;
     return e = z(e), new e(function(n, i) {
@@ -392,13 +392,13 @@ function z(r) {
   var e;
   return (e = r ?? Y.Promise) !== null && e !== void 0 ? e : Promise;
 }
-function ft(r) {
+function at(r) {
   return r && v(r.next) && v(r.error) && v(r.complete);
 }
-function lt(r) {
-  return r && r instanceof F || ft(r) && H(r);
+function ft(r) {
+  return r && r instanceof F || at(r) && H(r);
 }
-var pt = J(function(r) {
+var lt = J(function(r) {
   return function() {
     r(this), this.name = "ObjectUnsubscribedError", this.message = "object unsubscribed";
   };
@@ -413,7 +413,7 @@ var pt = J(function(r) {
     return n.operator = t, n;
   }, e.prototype._throwIfClosed = function() {
     if (this.closed)
-      throw new pt();
+      throw new lt();
   }, e.prototype.next = function(t) {
     var n = this;
     w(function() {
@@ -529,7 +529,7 @@ var pt = J(function(r) {
       a && o.splice(0, a + 1);
     }
   }, e;
-}(O), ht = {
+}(O), pt = {
   url: "",
   deserializer: function(r) {
     return JSON.parse(r.data);
@@ -537,14 +537,14 @@ var pt = J(function(r) {
   serializer: function(r) {
     return JSON.stringify(r);
   }
-}, dt = "WebSocketSubject.error must be called with an object with an error code, and an optional reason: { code: number, reason: string }", vt = function(r) {
+}, ht = "WebSocketSubject.error must be called with an object with an error code, and an optional reason: { code: number, reason: string }", dt = function(r) {
   b(e, r);
   function e(t, n) {
     var i = r.call(this) || this;
     if (i._socket = null, t instanceof k)
       i.destination = n, i.source = t;
     else {
-      var o = i._config = W({}, ht);
+      var o = i._config = W({}, pt);
       if (i._output = new O(), typeof t == "string")
         o.url = t;
       else
@@ -625,7 +625,7 @@ var pt = J(function(r) {
           }
       }, function(f) {
         var m = t._config.closingObserver;
-        m && m.next(void 0), f && f.code ? a.close(f.code, f.reason) : c.error(new TypeError(dt)), t._resetState();
+        m && m.next(void 0), f && f.code ? a.close(f.code, f.reason) : c.error(new TypeError(ht)), t._resetState();
       }, function() {
         var f = t._config.closingObserver;
         f && f.next(void 0), a.close(), t._resetState();
@@ -655,17 +655,17 @@ var pt = J(function(r) {
     t && (t.readyState === 1 || t.readyState === 0) && t.close(), this._resetState(), r.prototype.unsubscribe.call(this);
   }, e;
 }(B);
-function bt(r) {
-  return new vt(r);
+function vt(r) {
+  return new dt(r);
 }
-function yt() {
+function bt() {
   const r = $(document, "visibilitychange").pipe(q(void 0));
   return (e) => r.pipe(G(() => document.visibilityState === "visible"), Q((t) => t ? e : X()));
 }
 const D = "listo-lists-manager";
-class _t extends HTMLElement {
+class yt extends HTMLElement {
   constructor() {
-    super(...arguments), this.socket = bt({
+    super(...arguments), this.socket = vt({
       url: "ws://" + location.host + "/ws",
       deserializer(e) {
         return JSON.parse(e.data);
@@ -673,7 +673,7 @@ class _t extends HTMLElement {
     }), this._teardown = new Z();
   }
   connectedCallback() {
-    this.socket.pipe(yt(), N(() => console.log("start")), tt({ count: 5, delay: 2e3 }), et(this._teardown)).subscribe((e) => {
+    this.socket.pipe(bt(), N({ count: 5, delay: 2e3 }), tt(this._teardown)).subscribe((e) => {
       window.dispatchEvent(new CustomEvent("update-list", { detail: e }));
     });
   }
@@ -681,8 +681,8 @@ class _t extends HTMLElement {
     this._teardown.next();
   }
 }
-customElements.get(D) || customElements.define(D, _t);
+customElements.get(D) || customElements.define(D, yt);
 export {
-  _t as ListoListManager,
+  yt as ListoListManager,
   D as tagName
 };

@@ -60,12 +60,10 @@ impl ViewRouter {
                 //     get(|State(state): State<ArcedState>| async move {
                 //         let mut context = Context::new();
                 //         context.insert("name", "austin");
-
                 //         let html = state
                 //             .tera
                 //             .render("upload.html", &context)
                 //             .expect("render error");
-
                 //         Html(html)
                 //     }),
                 // )
@@ -77,6 +75,7 @@ impl ViewRouter {
                     get(
                         |State(state): State<ArcedState>,
                          claim: Option<Extension<Claims>>,
+                         Extension(lang): Extension<TeraLanguageIdentifier>,
                          Path((_, list_id)): Path<(String, u64)>| async move {
                             let claim = return_if_not_logged_in!(claim);
 
@@ -89,7 +88,8 @@ impl ViewRouter {
                                     .expect("Sql error");
                                 list.items = Some(list_items);
 
-                                Html(render_list(&state.tera, &list, claim.sub)).into_response()
+                                Html(render_list(&state.tera, &list, claim.sub, &lang))
+                                    .into_response()
                             } else {
                                 StatusCode::NOT_FOUND.into_response()
                             }
@@ -137,7 +137,7 @@ async fn lists_view(
         .await
         .expect("Pagination failed")
         .iter()
-        .map(|list| render_list(&state.tera, list, claim.sub))
+        .map(|list| render_list(&state.tera, list, claim.sub, &lang))
         .collect();
 
     let families = Family::paginate(state.pool.clone(), claim.sub, false)
@@ -176,10 +176,11 @@ async fn view_families(
 }
 
 /// Renders a list into a listo-list web component HTML template
-fn render_list(tera: &Tera, list: &List, user_id: u64) -> String {
+fn render_list(tera: &Tera, list: &List, user_id: u64, lang: &TeraLanguageIdentifier) -> String {
     let mut ctx = Context::new();
     ctx.insert("list", list);
     ctx.insert("user_id", &user_id);
+    ctx.insert("lang", lang);
 
     tera.render("components/listo-list.html", &ctx)
         .expect("List template error")

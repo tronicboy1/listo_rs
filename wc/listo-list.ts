@@ -2,39 +2,32 @@
 import {LitElement, css, html} from "lit";
 import {Subject, mergeMap, switchMap, take, takeUntil, tap} from "rxjs";
 import {filterForDoubleClick} from "@tronicboy/rxjs-operators";
+import {property, query} from "lit/decorators.js";
+import {ItemChangeMessage} from "./listo-lists-manager";
 
 export const tagName = "listo-list";
 
 export class ListoList extends LitElement {
-  static properties = {
-    //@ts-ignore
-    _items: {type: Array, attribute: "list-items", converter: text => JSON.parse(text)},
-    listId: {type: Number, attribute: "list-id"},
-    userId: {type: Number, attribute: "user-id"},
-    _loading: {state: true},
-    _deletingIds: {state: true},
-  };
+  @property({
+    attribute: "list-items",
+    type: Array,
+    converter(value, type) {
+      return JSON.parse(value ?? "[]");
+    },
+  })
+  _items: any[] = [];
+  @property({attribute: "list-id", type: Number}) listId = 0;
+  @property({attribute: "user-id", type: Number}) userId = 0;
 
-  constructor() {
-    super();
-    /** @type {any[]} */
-    this._items = [];
-    this.listId = 0;
-    this.userId = 0;
-    this.form = /** @type {HTMLFormElement} */ (this.shadowRoot?.querySelector("form"));
-    this._loading = false;
-    this._refreshing = false;
-    this._deletingIds = new Set();
-    this._first_render = true;
-    /** @type {Subject<number>} */
-    this._deleteClick = new Subject();
-    /** @type {Subject<void>} */
-    this._deleteListClick = new Subject();
-    /** @type {Subject<void>} */
-    this._teardown = new Subject();
-    /** @type {Subject<void>} */
-    this._refresh = new Subject();
-  }
+  private _deleteClick = new Subject<number>();
+  private _deleteListClick = new Subject<void>();
+  private _teardown = new Subject<void>();
+  private _refresh = new Subject<void>();
+
+  private _first_render = true;
+  private _deletingIds = new Set();
+  private _loading = false;
+  form = this.shadowRoot!.querySelector("form")!;
 
   connectedCallback() {
     super.connectedCallback();
@@ -94,29 +87,21 @@ export class ListoList extends LitElement {
     window.removeEventListener("update-list", this.handleUpdateList);
   }
 
-  /**
-   *
-   * @param {CustomEvent<import("../../wc/listo-lists-manager").ItemChangeMessage>} event
-   */
-  handleUpdateList = ({detail}) => {
-    if (detail.list_id !== this.listId || this.userId === detail.user_id || this._refreshing) {
+  handleUpdateList = ({detail}: CustomEvent<ItemChangeMessage>) => {
+    if (detail.list_id !== this.listId || this.userId === detail.user_id) {
       return;
     }
 
     this._refresh.next();
   };
 
-  createRenderRoot() {
-    const renderRoot = /** @type {HTMLUListElement} */ (this.querySelector("ul"));
+  protected createRenderRoot() {
+    const renderRoot = this.querySelector("ul")!;
 
     return renderRoot;
   }
 
-  /**
-   *
-   * @param {Event} event
-   */
-  handleFormSubmit = event => {
+  handleFormSubmit = (event: Event) => {
     event.preventDefault();
 
     if (this._loading) {
@@ -148,15 +133,11 @@ export class ListoList extends LitElement {
   };
 
   refreshList() {
-    this._refreshing = true;
     return fetch(`/api/v1/lists/${this.listId}/items`)
       .then(res => res.json())
       .catch(() => this.remove())
       .then(items => {
         this._items = items;
-      })
-      .finally(() => {
-        this._refreshing = false;
       });
   }
 

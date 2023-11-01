@@ -20,7 +20,7 @@ export class ListoListManager extends HTMLElement {
 
   connectedCallback() {
     this.socket
-      .pipe(stopWhileHidden(),tap(() => console.log("start")), retry({count: 5, delay: 2000}), takeUntil(this._teardown))
+      .pipe(stopWhileHidden(), retry({count: 5, delay: 2000}), takeUntil(this._teardown))
       .subscribe(message => {
         window.dispatchEvent(new CustomEvent("update-list", {detail: message}));
       });
