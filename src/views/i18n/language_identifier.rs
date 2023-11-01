@@ -6,6 +6,8 @@ use std::pin::Pin;
 use tower::{Layer, Service};
 use unic_langid::LanguageIdentifier;
 
+use super::supported;
+
 /// Newtype of unic_langid::LanguageIdentifier to allow serialization in use with Tera
 #[derive(Debug, Clone)]
 pub struct TeraLanguageIdentifier(LanguageIdentifier);
@@ -77,6 +79,7 @@ impl<S> Layer<S> for LanguageIdentifierExtractorLayer {
 }
 
 /// Unwraps the path and extracts language identifier if available.
+/// Returns None if the LanguageIdentifier is not supported
 fn lang_code_from_uri(uri: &Uri) -> Option<TeraLanguageIdentifier> {
     let mut path_parts = uri.path().split('/');
     path_parts.next();
@@ -84,5 +87,6 @@ fn lang_code_from_uri(uri: &Uri) -> Option<TeraLanguageIdentifier> {
     path_parts
         .next()
         .and_then(|code| code.parse::<LanguageIdentifier>().ok())
+        .and_then(|ident| if supported(&ident) { Some(ident) } else { None })
         .map(|ident| TeraLanguageIdentifier(ident))
 }
