@@ -1,9 +1,9 @@
-//@ts-check
-import {LitElement, css, html} from "lit";
+import {LitElement, html} from "lit";
 import {Subject, mergeMap, switchMap, take, takeUntil, tap} from "rxjs";
 import {filterForDoubleClick} from "@tronicboy/rxjs-operators";
-import {property, query} from "lit/decorators.js";
+import {property} from "lit/decorators.js";
 import {ItemChangeMessage} from "./listo-lists-manager";
+import {Localization} from "./fluent";
 
 export const tagName = "listo-list";
 
@@ -11,13 +11,14 @@ export class ListoList extends LitElement {
   @property({
     attribute: "list-items",
     type: Array,
-    converter(value, type) {
+    converter(value, _type) {
       return JSON.parse(value ?? "[]");
     },
   })
   _items: any[] = [];
   @property({attribute: "list-id", type: Number}) listId = 0;
   @property({attribute: "user-id", type: Number}) userId = 0;
+  @property({attribute: "locale-ident"}) localIdent = "en";
 
   private _deleteClick = new Subject<number>();
   private _deleteListClick = new Subject<void>();
@@ -160,7 +161,7 @@ export class ListoList extends LitElement {
       : html`<button
           type="button"
           class="delete"
-          aria-label="delete this list"
+          aria-label=${Localization.formatMessage(this.localIdent, "listo-list-delete-button") ?? ""}
           @click=${() => this._deleteListClick.next()}
         >
           <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">

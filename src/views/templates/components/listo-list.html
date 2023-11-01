@@ -4,6 +4,7 @@
     list-id="{{ list.list_id }}"
     list-items="{{ list.items | json_encode }}"
     user-id="{{ user_id }}"
+    locale-ident="{{ lang }}"
   >
     <div slot="list-name" class="title">
       <h3>{{ list.name }}</h3>
