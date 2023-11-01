@@ -101,6 +101,11 @@ fn lang_code_from_uri(uri: &Uri) -> Option<TeraLanguageIdentifier> {
 }
 
 /// Extracts language code from Accept-Language header if available and asks for at least one supported language
+///
+/// # Details
+/// All modern browsers send the Accept-Language header to tell a server what content it should send
+///
+/// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language
 fn lang_code_from_headers(headers: &HeaderMap) -> Option<TeraLanguageIdentifier> {
     let accept_lang = headers
         .get("Accept-Language")
