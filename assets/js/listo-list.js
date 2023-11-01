@@ -55,13 +55,12 @@ export class ListoList extends LitElement {
           fetch(`/api/v1/lists/${this.listId}/items/${itemId}`, {method: "DELETE"}).finally(() => {
             this._deletingIds.delete(itemId);
           })
-        ),
-        tap(() => {
-          this._refresh.next();
-          this._loading = false;
-        })
+        )
       )
-      .subscribe();
+      .subscribe(() => {
+        this._refresh.next();
+        this._loading = false;
+      });
 
     this._deleteListClick
       .pipe(

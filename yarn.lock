@@ -124,12 +124,12 @@
   dependencies:
     "@lit-labs/ssr-dom-shim" "^1.1.2-pre.0"
 
-"@tronicboy/rxjs-operators@^0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@tronicboy/rxjs-operators/-/rxjs-operators-0.0.3.tgz#bd458775a62d897c41f27af4802b6bd0d43b15ee"
-  integrity sha512-ecFEUV0U4d9Z8SpEhi+wrMtLcNUOsOD+hJVsshd60hsBZI1WduKXAN0GoJuYNVb0UJRTE7fZCJA+Ug+rKvVm3Q==
+"@tronicboy/rxjs-operators@^0.0.4":
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/@tronicboy/rxjs-operators/-/rxjs-operators-0.0.4.tgz#e2dfd8a9a8364cd9801d655f63bb50e4d8b2a5fb"
+  integrity sha512-auOCEz+CNpArpshtQxPNqM2m6wz8D4WWjdkNa50uxAzSy1i8Tcvq0XhiXt8WttP0rvq8uhoL5/uNBcp95I+hLg==
   dependencies:
-    rxjs "^7.8.0"
+    rxjs "^7.8.1"
 
 "@types/trusted-types@^2.0.2":
   version "2.0.5"
@@ -225,7 +225,7 @@ rollup@^3.27.1:
   optionalDependencies:
     fsevents "~2.3.2"
 
-rxjs@^7.8.0, rxjs@^7.8.1:
+rxjs@^7.8.1:
   version "7.8.1"
   resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-7.8.1.tgz#6f6f3d99ea8044291efd92e7c7fcf562c4057543"
   integrity sha512-AA3TVj+0A2iuIoQkWEK/tqFjBq2j+6PO6Y0zJcvzLAFhEFIO3HL0vls9hWLncZbAAbK0mar7oZ4V079I/qPMxg==

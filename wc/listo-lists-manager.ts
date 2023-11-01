@@ -1,5 +1,6 @@
-import {Subject, retry, takeUntil} from "rxjs";
+import {Subject, retry, takeUntil, tap} from "rxjs";
 import {webSocket} from "rxjs/webSocket";
+import {stopWhileHidden} from "@tronicboy/rxjs-operators";
 
 export const tagName = "listo-lists-manager";
 
@@ -18,9 +19,11 @@ export class ListoListManager extends HTMLElement {
   private _teardown = new Subject<void>();
 
   connectedCallback() {
-    this.socket.pipe(retry({count: 5, delay: 2000}), takeUntil(this._teardown)).subscribe(message => {
-      window.dispatchEvent(new CustomEvent("update-list", {detail: message}));
-    });
+    this.socket
+      .pipe(stopWhileHidden(),tap(() => console.log("start")), retry({count: 5, delay: 2000}), takeUntil(this._teardown))
+      .subscribe(message => {
+        window.dispatchEvent(new CustomEvent("update-list", {detail: message}));
+      });
   }
 
   disconnectedCallback() {
