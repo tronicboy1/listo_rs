@@ -1,5 +1,5 @@
 import { LitElement as $t, html as S } from "lit";
-import { buffer as Rt, debounceTime as At, filter as Ot, map as Tt, Subject as $, takeUntil as M, tap as Pt, mergeMap as G, take as It, switchMap as xt } from "rxjs";
+import { buffer as Rt, debounceTime as At, filter as Ot, map as Tt, Subject as $, takeUntil as M, tap as Pt, mergeMap as G, take as It, switchMap as Ct } from "rxjs";
 function H(r = 250) {
   return (t) => t.pipe(Rt(t.pipe(At(r))), Ot((e) => e.length > 1), Tt(([e]) => e));
 }
@@ -8,8 +8,8 @@ function H(r = 250) {
  * Copyright 2019 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const A = globalThis, F = A.ShadowRoot && (A.ShadyCSS === void 0 || A.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, mt = Symbol(), J = /* @__PURE__ */ new WeakMap();
-let Ct = class {
+const A = globalThis, j = A.ShadowRoot && (A.ShadyCSS === void 0 || A.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, mt = Symbol(), J = /* @__PURE__ */ new WeakMap();
+let xt = class {
   constructor(t, e, n) {
     if (this._$cssResult$ = !0, n !== mt)
       throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
@@ -18,7 +18,7 @@ let Ct = class {
   get styleSheet() {
     let t = this.o;
     const e = this.t;
-    if (F && t === void 0) {
+    if (j && t === void 0) {
       const n = e !== void 0 && e.length === 1;
       n && (t = J.get(e)), t === void 0 && ((this.o = t = new CSSStyleSheet()).replaceSync(this.cssText), n && J.set(e, t));
     }
@@ -28,15 +28,15 @@ let Ct = class {
     return this.cssText;
   }
 };
-const Nt = (r) => new Ct(typeof r == "string" ? r : r + "", void 0, mt), Ut = (r, t) => {
-  if (F)
+const Nt = (r) => new xt(typeof r == "string" ? r : r + "", void 0, mt), Ut = (r, t) => {
+  if (j)
     r.adoptedStyleSheets = t.map((e) => e instanceof CSSStyleSheet ? e : e.styleSheet);
   else
     for (const e of t) {
       const n = document.createElement("style"), i = A.litNonce;
       i !== void 0 && n.setAttribute("nonce", i), n.textContent = e.cssText, r.appendChild(n);
     }
-}, X = F ? (r) => r : (r) => r instanceof CSSStyleSheet ? ((t) => {
+}, X = j ? (r) => r : (r) => r instanceof CSSStyleSheet ? ((t) => {
   let e = "";
   for (const n of t.cssRules)
     e += n.cssText;
@@ -47,7 +47,7 @@ const Nt = (r) => new Ct(typeof r == "string" ? r : r + "", void 0, mt), Ut = (r
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const { is: Lt, defineProperty: Mt, getOwnPropertyDescriptor: Dt, getOwnPropertyNames: kt, getOwnPropertySymbols: jt, getPrototypeOf: Ft } = Object, P = globalThis, Q = P.trustedTypes, zt = Q ? Q.emptyScript : "", Bt = P.reactiveElementPolyfillSupport, w = (r, t) => r, O = { toAttribute(r, t) {
+const { is: Lt, defineProperty: Mt, getOwnPropertyDescriptor: Dt, getOwnPropertyNames: kt, getOwnPropertySymbols: Ft, getPrototypeOf: jt } = Object, P = globalThis, Q = P.trustedTypes, zt = Q ? Q.emptyScript : "", Bt = P.reactiveElementPolyfillSupport, w = (r, t) => r, O = { toAttribute(r, t) {
   switch (t) {
     case Boolean:
       r = r ? zt : null;
@@ -109,14 +109,14 @@ class g extends HTMLElement {
   static _$Ei() {
     if (this.hasOwnProperty(w("elementProperties")))
       return;
-    const t = Ft(this);
+    const t = jt(this);
     t.finalize(), t.l !== void 0 && (this.l = [...t.l]), this.elementProperties = new Map(t.elementProperties);
   }
   static finalize() {
     if (this.hasOwnProperty(w("finalized")))
       return;
     if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(w("properties"))) {
-      const e = this.properties, n = [...kt(e), ...jt(e)];
+      const e = this.properties, n = [...kt(e), ...Ft(e)];
       for (const i of n)
         this.createProperty(i, e[i]);
     }
@@ -300,7 +300,7 @@ function I(r) {
     return i.constructor.createProperty(o, l ? { ...n, wrapped: !0 } : n), l ? Object.getOwnPropertyDescriptor(i, o) : void 0;
   })(r, t, e);
 }
-class x {
+class C {
   /**
    * Create a `FluentType` instance.
    *
@@ -316,7 +316,7 @@ class x {
     return this.value;
   }
 }
-class c extends x {
+class c extends C {
   /**
    * Create an instance of `FluentNone` with an optional fallback value.
    * @param value The fallback value of this `FluentNone`.
@@ -331,7 +331,7 @@ class c extends x {
     return `{${this.value}}`;
   }
 }
-class d extends x {
+class d extends C {
   /**
    * Create an instance of `FluentNumber` with options to the
    * `Intl.NumberFormat` constructor.
@@ -353,7 +353,7 @@ class d extends x {
     }
   }
 }
-class _ extends x {
+class _ extends C {
   /**
    * Create an instance of `FluentDateTime` with options to the
    * `Intl.DateTimeFormat` constructor.
@@ -375,8 +375,8 @@ class _ extends x {
     }
   }
 }
-const tt = 100, qt = "⁨", Vt = "⁩";
-function Wt(r, t, e) {
+const tt = 100, Wt = "⁨", qt = "⁩";
+function Vt(r, t, e) {
   if (e === t || e instanceof d && t instanceof d && e.value === t.value)
     return !0;
   if (t instanceof d && typeof e == "string") {
@@ -387,15 +387,15 @@ function Wt(r, t, e) {
   return !1;
 }
 function et(r, t, e) {
-  return t[e] ? E(r, t[e].value) : (r.reportError(new RangeError("No default")), new c());
+  return t[e] ? y(r, t[e].value) : (r.reportError(new RangeError("No default")), new c());
 }
-function j(r, t) {
+function F(r, t) {
   const e = [], n = /* @__PURE__ */ Object.create(null);
   for (const i of t)
-    i.type === "narg" ? n[i.name] = v(r, i.value) : e.push(v(r, i));
+    i.type === "narg" ? n[i.name] = b(r, i.value) : e.push(b(r, i));
   return { positional: e, named: n };
 }
-function v(r, t) {
+function b(r, t) {
   switch (t.type) {
     case "str":
       return t.value;
@@ -428,7 +428,7 @@ function Gt(r, { name: t }) {
     e = r.args[t];
   else
     return r.reportError(new ReferenceError(`Unknown variable: $${t}`)), new c(`$${t}`);
-  if (e instanceof x)
+  if (e instanceof C)
     return e;
   switch (typeof e) {
     case "string":
@@ -448,9 +448,9 @@ function Ht(r, { name: t, attr: e }) {
     return r.reportError(new ReferenceError(`Unknown message: ${t}`)), new c(t);
   if (e) {
     const i = n.attributes[e];
-    return i ? E(r, i) : (r.reportError(new ReferenceError(`Unknown attribute: ${e}`)), new c(`${t}.${e}`));
+    return i ? y(r, i) : (r.reportError(new ReferenceError(`Unknown attribute: ${e}`)), new c(`${t}.${e}`));
   }
-  return n.value ? E(r, n.value) : (r.reportError(new ReferenceError(`No value: ${t}`)), new c(t));
+  return n.value ? y(r, n.value) : (r.reportError(new ReferenceError(`No value: ${t}`)), new c(t));
 }
 function Jt(r, { name: t, attr: e, args: n }) {
   const i = `-${t}`, o = r.bundle._terms.get(i);
@@ -459,14 +459,14 @@ function Jt(r, { name: t, attr: e, args: n }) {
   if (e) {
     const h = o.attributes[e];
     if (h) {
-      r.params = j(r, n).named;
-      const p = E(r, h);
+      r.params = F(r, n).named;
+      const p = y(r, h);
       return r.params = null, p;
     }
     return r.reportError(new ReferenceError(`Unknown attribute: ${e}`)), new c(`${i}.${e}`);
   }
-  r.params = j(r, n).named;
-  const l = E(r, o.value);
+  r.params = F(r, n).named;
+  const l = y(r, o.value);
   return r.params = null, l;
 }
 function Xt(r, { name: t, args: e }) {
@@ -476,24 +476,24 @@ function Xt(r, { name: t, args: e }) {
   if (typeof n != "function")
     return r.reportError(new TypeError(`Function ${t}() is not callable`)), new c(`${t}()`);
   try {
-    let i = j(r, e);
+    let i = F(r, e);
     return n(i.positional, i.named);
   } catch (i) {
     return r.reportError(i), new c(`${t}()`);
   }
 }
 function Qt(r, { selector: t, variants: e, star: n }) {
-  let i = v(r, t);
+  let i = b(r, t);
   if (i instanceof c)
     return et(r, e, n);
   for (const o of e) {
-    const l = v(r, o.key);
-    if (Wt(r, i, l))
-      return E(r, o.value);
+    const l = b(r, o.key);
+    if (Vt(r, i, l))
+      return y(r, o.value);
   }
   return et(r, e, n);
 }
-function Et(r, t) {
+function yt(r, t) {
   if (r.dirty.has(t))
     return r.reportError(new RangeError("Cyclic reference")), new c();
   r.dirty.add(t);
@@ -505,12 +505,12 @@ function Et(r, t) {
     }
     if (r.placeables++, r.placeables > tt)
       throw r.dirty.delete(t), new RangeError(`Too many placeables expanded: ${r.placeables}, max allowed is ${tt}`);
-    n && e.push(qt), e.push(v(r, i).toString(r)), n && e.push(Vt);
+    n && e.push(Wt), e.push(b(r, i).toString(r)), n && e.push(qt);
   }
   return r.dirty.delete(t), e.join("");
 }
-function E(r, t) {
-  return typeof t == "string" ? r.bundle._transform(t) : Et(r, t);
+function y(r, t) {
+  return typeof t == "string" ? r.bundle._transform(t) : yt(r, t);
 }
 class Yt {
   constructor(t, e, n) {
@@ -713,7 +713,7 @@ class st {
       return this._transform(t);
     let i = new Yt(this, n, e);
     try {
-      return Et(i, t).toString(i);
+      return yt(i, t).toString(i);
     } catch (o) {
       if (i.errors && o instanceof Error)
         return i.errors.push(o), new c().toString(i);
@@ -721,7 +721,7 @@ class st {
     }
   }
 }
-const D = /^(-?[a-zA-Z][\w-]*) *= */gm, ot = /\.([a-zA-Z][\w-]*) *= */y, ne = /\*?\[/y, k = /(-?[0-9]+(?:\.([0-9]+))?)/y, ie = /([a-zA-Z][\w-]*)/y, at = /([$-])?([a-zA-Z][\w-]*)(?:\.([a-zA-Z][\w-]*))?/y, se = /^[A-Z][A-Z0-9_-]*$/, R = /([^{}\n\r]+)/y, oe = /([^\\"\n\r]*)/y, lt = /\\([\\"])/y, ut = /\\u([a-fA-F0-9]{4})|\\U([a-fA-F0-9]{6})/y, ae = /^\n+/, ct = / +$/, le = / *\r?\n/g, ue = /( *)$/, ce = /{\s*/y, ht = /\s*}/y, he = /\[\s*/y, fe = /\s*] */y, de = /\s*\(\s*/y, pe = /\s*->\s*/y, me = /\s*:\s*/y, Ee = /\s*,?\s*/y, ye = /\s+/y;
+const D = /^(-?[a-zA-Z][\w-]*) *= */gm, ot = /\.([a-zA-Z][\w-]*) *= */y, ne = /\*?\[/y, k = /(-?[0-9]+(?:\.([0-9]+))?)/y, ie = /([a-zA-Z][\w-]*)/y, at = /([$-])?([a-zA-Z][\w-]*)(?:\.([a-zA-Z][\w-]*))?/y, se = /^[A-Z][A-Z0-9_-]*$/, R = /([^{}\n\r]+)/y, oe = /([^\\"\n\r]*)/y, lt = /\\([\\"])/y, ut = /\\u([a-fA-F0-9]{4})|\\U([a-fA-F0-9]{6})/y, ae = /^\n+/, ct = / +$/, le = / *\r?\n/g, ue = /( *)$/, ce = /{\s*/y, ht = /\s*}/y, he = /\[\s*/y, fe = /\s*] */y, de = /\s*\(\s*/y, pe = /\s*->\s*/y, me = /\s*:\s*/y, ye = /\s*,?\s*/y, Ee = /\s+/y;
 class ft {
   constructor(t) {
     this.body = [], D.lastIndex = 0;
@@ -767,12 +767,12 @@ class ft {
       return l(s)[1];
     }
     function p(s) {
-      let a = N(), u = yt();
+      let a = N(), u = Et();
       if (a === null && Object.keys(u).length === 0)
         throw new SyntaxError("Expected message value or attributes");
       return { id: s, value: a, attributes: u };
     }
-    function yt() {
+    function Et() {
       let s = /* @__PURE__ */ Object.create(null);
       for (; n(ot); ) {
         let a = h(ot), u = N();
@@ -786,7 +786,7 @@ class ft {
       let s;
       if (n(R) && (s = h(R)), t[e] === "{" || t[e] === "}")
         return U(s ? [s] : [], 1 / 0);
-      let a = V();
+      let a = q();
       return a ? s ? U([s, a], a.length) : (a.value = L(a.value, ae), U([a], a.length)) : s ? L(s, ct) : null;
     }
     function U(s = [], a) {
@@ -801,7 +801,7 @@ class ft {
         }
         if (t[e] === "}")
           throw new SyntaxError("Unbalanced closing brace");
-        let f = V();
+        let f = q();
         if (f) {
           s.push(f), a = Math.min(a, f.length);
           continue;
@@ -810,10 +810,10 @@ class ft {
       }
       let u = s.length - 1, m = s[u];
       typeof m == "string" && (s[u] = L(m, ct));
-      let y = [];
+      let E = [];
       for (let f of s)
-        f instanceof dt && (f = f.value.slice(0, f.value.length - a)), f && y.push(f);
-      return y;
+        f instanceof dt && (f = f.value.slice(0, f.value.length - a)), f && E.push(f);
+      return E;
     }
     function B() {
       o(ce, SyntaxError);
@@ -863,7 +863,7 @@ class ft {
           case void 0:
             throw new SyntaxError("Unclosed argument list");
         }
-        s.push(wt()), o(Ee);
+        s.push(wt()), o(ye);
       }
     }
     function wt() {
@@ -878,10 +878,10 @@ class ft {
       let s = [], a = 0, u;
       for (; n(ne); ) {
         i("*") && (u = a);
-        let m = vt(), y = N();
-        if (y === null)
+        let m = bt(), E = N();
+        if (E === null)
           throw new SyntaxError("Expected variant value");
-        s[a++] = { key: m, value: y };
+        s[a++] = { key: m, value: E };
       }
       if (a === 0)
         return null;
@@ -889,22 +889,22 @@ class ft {
         throw new SyntaxError("Expected default variant");
       return { variants: s, star: u };
     }
-    function vt() {
+    function bt() {
       o(he, SyntaxError);
       let s;
-      return n(k) ? s = q() : s = {
+      return n(k) ? s = W() : s = {
         type: "str",
         value: h(ie)
       }, o(fe, SyntaxError), s;
     }
     function Z() {
       if (n(k))
-        return q();
+        return W();
       if (t[e] === '"')
-        return bt();
+        return vt();
       throw new SyntaxError("Invalid expression");
     }
-    function q() {
+    function W() {
       let [, s, a = ""] = l(k), u = a.length;
       return {
         type: "num",
@@ -912,7 +912,7 @@ class ft {
         precision: u
       };
     }
-    function bt() {
+    function vt() {
       i('"', SyntaxError);
       let s = "";
       for (; ; ) {
@@ -941,9 +941,9 @@ class ft {
       }
       throw new SyntaxError("Unknown escape sequence");
     }
-    function V() {
+    function q() {
       let s = e;
-      switch (o(ye), t[e]) {
+      switch (o(Ee), t[e]) {
         case ".":
         case "[":
         case "*":
@@ -951,14 +951,14 @@ class ft {
         case void 0:
           return !1;
         case "{":
-          return W(t.slice(s, e));
+          return V(t.slice(s, e));
       }
-      return t[e - 1] === " " ? W(t.slice(s, e)) : !1;
+      return t[e - 1] === " " ? V(t.slice(s, e)) : !1;
     }
     function L(s, a) {
       return s.replace(a, "");
     }
-    function W(s) {
+    function V(s) {
       let a = s.replace(le, `
 `), u = ue.exec(s)[1].length;
       return new dt(a, u);
@@ -980,7 +980,27 @@ list-name = List Name
 
 listo-list-delete-button = delete this list
 
-`, we = `hello-world = こんにちは
+listo-list-form-item-name-label = Name of item to add to list
+
+# Families
+
+families-header = Family/Group Management
+
+## listo-family WC
+
+listo-family-li-label = Double click to remove this member
+
+listo-family-new-member-email-label = Enter the email address of the member you would like to add.
+  If incorrect or unregistered, addition will fail.
+
+listo-family-new-member-submit-label = Click to attempt to add new member
+
+listo-family-delete-family-label = Double click to delete this group/family
+
+## listo-new-family WC
+
+listo-new-family-family-name-label = Family Name
+`, we = `# Lists
 
 list-family = リストの所属
 
@@ -989,6 +1009,26 @@ list-name = リスト名
 ## listo-list
 
 listo-list-delete-button = このリストを削除する
+
+listo-list-form-item-name-label = リストに追加するアイテムの名前
+
+# Families
+
+families-header = グループ管理
+
+## listo-family WC
+
+listo-family-li-label = ダブルクリックをしてこのメンバーを削除する
+
+listo-family-new-member-email-label = 新規メンバーのメールアドレスを入力する。合わない場合は追加ができない。
+
+listo-family-new-member-submit-label = 新規メンバーの追加を試みる
+
+listo-family-delete-family-label = ダブルクリックでこのグループを削除する
+
+## listo-new-family WC
+
+listo-new-family-family-name-label = グループ名
 `;
 class _e {
   static get bundles() {
@@ -1011,13 +1051,13 @@ class _e {
     return o?.value ? i.formatPattern(o.value, n) : void 0;
   }
 }
-var ve = Object.defineProperty, be = Object.getOwnPropertyDescriptor, C = (r, t, e, n) => {
-  for (var i = n > 1 ? void 0 : n ? be(t, e) : t, o = r.length - 1, l; o >= 0; o--)
+var be = Object.defineProperty, ve = Object.getOwnPropertyDescriptor, x = (r, t, e, n) => {
+  for (var i = n > 1 ? void 0 : n ? ve(t, e) : t, o = r.length - 1, l; o >= 0; o--)
     (l = r[o]) && (i = (n ? l(t, e, i) : l(i)) || i);
-  return n && i && ve(t, e, i), i;
+  return n && i && be(t, e, i), i;
 };
 const pt = "listo-list";
-class b extends $t {
+class v extends $t {
   constructor() {
     super(...arguments), this._items = [], this.listId = 0, this.userId = 0, this.localIdent = "en", this._deleteClick = new $(), this._deleteListClick = new $(), this._teardown = new $(), this._refresh = new $(), this._first_render = !0, this._deletingIds = /* @__PURE__ */ new Set(), this._loading = !1, this.form = this.shadowRoot.querySelector("form"), this.handleUpdateList = ({ detail: t }) => {
       t.list_id !== this.listId || this.userId === t.user_id || this._refresh.next();
@@ -1066,7 +1106,7 @@ class b extends $t {
       t.ok && this.remove();
     }), this._refresh.pipe(
       M(this._teardown),
-      xt(() => this.refreshList())
+      Ct(() => this.refreshList())
     ).subscribe();
   }
   disconnectedCallback() {
@@ -1103,7 +1143,7 @@ class b extends $t {
         </button>`}`;
   }
 }
-C([
+x([
   I({
     attribute: "list-items",
     type: Array,
@@ -1111,18 +1151,18 @@ C([
       return JSON.parse(r ?? "[]");
     }
   })
-], b.prototype, "_items", 2);
-C([
+], v.prototype, "_items", 2);
+x([
   I({ attribute: "list-id", type: Number })
-], b.prototype, "listId", 2);
-C([
+], v.prototype, "listId", 2);
+x([
   I({ attribute: "user-id", type: Number })
-], b.prototype, "userId", 2);
-C([
+], v.prototype, "userId", 2);
+x([
   I({ attribute: "locale-ident" })
-], b.prototype, "localIdent", 2);
-customElements.get(pt) || customElements.define(pt, b);
+], v.prototype, "localIdent", 2);
+customElements.get(pt) || customElements.define(pt, v);
 export {
-  b as ListoList,
+  v as ListoList,
   pt as tagName
 };

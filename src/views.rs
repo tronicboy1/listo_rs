@@ -98,8 +98,11 @@ impl ViewRouter {
                 )
                 .route(
                     "/:lang/login",
-                    get(|State(state): State<ArcedState>| async move {
-                        let ctx = Context::new();
+                    get(|State(state): State<ArcedState>,
+                    Extension(lang): Extension<TeraLanguageIdentifier>,| async move {
+                        let mut ctx = Context::new();
+                        ctx.insert("lang", &lang);
+
                         let html = state
                             .tera
                             .render("login.html", &ctx)
@@ -157,6 +160,7 @@ async fn lists_view(
 async fn view_families(
     State(state): State<ArcedState>,
     claim: Option<Extension<Claims>>,
+    Extension(lang): Extension<TeraLanguageIdentifier>,
 ) -> axum::response::Response {
     let claim = return_if_not_logged_in!(claim);
 
@@ -166,6 +170,7 @@ async fn view_families(
 
     let mut ctx = Context::new();
     ctx.insert("families", &families);
+    ctx.insert("lang", &lang);
 
     let html = state
         .tera
