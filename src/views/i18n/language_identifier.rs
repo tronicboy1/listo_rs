@@ -69,7 +69,7 @@ where
 
             let target_lang = ident.unwrap_or(TeraLanguageIdentifier(ENGLISH));
 
-            let redirect_uri = target_lang.language.to_string() + req.uri().path();
+            let redirect_uri = String::from("/") + target_lang.language.as_str() + req.uri().path();
 
             Box::pin(async move { Ok(Redirect::permanent(&redirect_uri).into_response()) })
         }

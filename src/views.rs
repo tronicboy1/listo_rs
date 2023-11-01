@@ -77,7 +77,7 @@ impl ViewRouter {
                     get(
                         |State(state): State<ArcedState>,
                          claim: Option<Extension<Claims>>,
-                         Path(list_id): Path<u64>| async move {
+                         Path((_, list_id)): Path<(String, u64)>| async move {
                             let claim = return_if_not_logged_in!(claim);
 
                             let mut conn = state.pool.get_conn().await.expect("Sql Error");
