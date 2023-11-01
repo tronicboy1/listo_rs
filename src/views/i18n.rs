@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use fluent::{bundle::FluentBundle, FluentResource};
+use unic_langid::subtags::Language;
 use unic_langid::{langid, LanguageIdentifier};
 
 mod language_identifier;
@@ -11,10 +12,8 @@ pub use language_identifier::TeraLanguageIdentifier;
 pub const ENGLISH: LanguageIdentifier = langid!("en");
 pub const JAPANESE: LanguageIdentifier = langid!("ja");
 
-pub type Locales = HashMap<
-    LanguageIdentifier,
-    FluentBundle<FluentResource, intl_memoizer::concurrent::IntlLangMemoizer>,
->;
+pub type Locales =
+    HashMap<Language, FluentBundle<FluentResource, intl_memoizer::concurrent::IntlLangMemoizer>>;
 
 pub struct Localizer {
     locales: Locales,
@@ -43,7 +42,7 @@ impl tera::Function for Localizer {
 
         let bundle = self
             .locales
-            .get(&lang_arg)
+            .get(&lang_arg.language)
             .ok_or(tera::Error::msg("locale not registered"))?;
 
         let msg = bundle
@@ -83,14 +82,14 @@ fn init() -> Locales {
     let mut locales: Locales = HashMap::new();
 
     let en = create_bundle!("locales/en/main.ftl", vec![ENGLISH]);
-    locales.insert(ENGLISH, en);
+    locales.insert(ENGLISH.language, en);
 
     let ja = create_bundle!("locales/ja/main.ftl", vec![JAPANESE]);
-    locales.insert(JAPANESE, ja);
+    locales.insert(JAPANESE.language, ja);
 
     locales
 }
 
 pub fn supported(lang: &LanguageIdentifier) -> bool {
-    lang == &ENGLISH || lang == &JAPANESE
+    lang.language == ENGLISH.language || lang.language == JAPANESE.language
 }

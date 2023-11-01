@@ -1,5 +1,5 @@
 use axum::response::Response;
-use http::{Request, Uri};
+use http::{HeaderMap, Request, Uri};
 use serde::ser::Serialize;
 use std::future::Future;
 use std::pin::Pin;
@@ -62,7 +62,9 @@ where
 
             Box::pin(self.inner.call(req))
         } else {
-            todo!("Try to redirect using language header")
+            let headers = req.headers();
+
+            todo!()
         }
     }
 }
@@ -89,4 +91,87 @@ fn lang_code_from_uri(uri: &Uri) -> Option<TeraLanguageIdentifier> {
         .and_then(|code| code.parse::<LanguageIdentifier>().ok())
         .and_then(|ident| if supported(&ident) { Some(ident) } else { None })
         .map(|ident| TeraLanguageIdentifier(ident))
+}
+
+fn lang_code_from_headers(headers: &HeaderMap) -> Option<TeraLanguageIdentifier> {
+    let accept_lang = headers
+        .get("Accept-Language")
+        .and_then(|val| val.to_str().ok())?;
+
+    accept_lang
+        .parse::<LanguageIdentifier>()
+        .ok()
+        .map(|ident| TeraLanguageIdentifier(ident))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ops::Deref;
+
+    use http::HeaderValue;
+
+    use crate::views::i18n::JAPANESE;
+
+    use super::*;
+
+    #[test]
+    fn can_get_supported_lang_code_from_uri() {
+        let uri = "http://localhost:3000/ja/lists".parse::<Uri>().unwrap();
+
+        let ident = lang_code_from_uri(&uri);
+
+        assert!(ident.is_some());
+        assert_eq!(ident.unwrap().deref(), &JAPANESE)
+    }
+
+    #[test]
+    fn unsupported_lang_code_from_uri() {
+        let uri = "http://localhost:3000/de/lists".parse::<Uri>().unwrap();
+
+        let ident = lang_code_from_uri(&uri);
+
+        assert!(ident.is_none());
+    }
+
+    #[test]
+    fn can_extract_lang_header_single() {
+        let mut headers = HeaderMap::new();
+        headers.insert("Accept-Language", HeaderValue::from_static("de"));
+
+        let ident = lang_code_from_headers(&headers).unwrap();
+
+        let target = "de".parse::<LanguageIdentifier>().unwrap();
+        assert_eq!(ident.deref(), &target)
+    }
+
+    #[test]
+    fn can_extract_lang_header_compound() {
+        let mut headers = HeaderMap::new();
+        headers.insert("Accept-Language", HeaderValue::from_static("de-CH"));
+
+        let ident = lang_code_from_headers(&headers).unwrap();
+
+        let target = "de-CH".parse::<LanguageIdentifier>().unwrap();
+        assert_eq!(ident.deref(), &target)
+    }
+
+    #[test]
+    fn can_extract_lang_header_compound_with_quality_val() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "Accept-Language",
+            HeaderValue::from_static("en-US,en;q=0.5"),
+        );
+
+        let ident = lang_code_from_headers(&headers).unwrap();
+
+        let target = "en".parse::<LanguageIdentifier>().unwrap();
+        assert_eq!(ident.deref(), &target)
+    }
+
+    #[test]
+    fn can_extract_lang_header_wildcard() {
+        let mut headers = HeaderMap::new();
+        headers.insert("Accept-Language", HeaderValue::from_static("*"));
+    }
 }
