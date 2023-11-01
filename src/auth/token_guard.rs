@@ -1,7 +1,7 @@
 use std::pin::Pin;
 
 use axum::response::IntoResponse;
-use futures::Future;
+use std::future::Future;
 use http::StatusCode;
 use tower::{Layer, Service};
 

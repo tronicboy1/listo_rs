@@ -2,6 +2,16 @@
 
 This is an implementation of a shared shopping list in rust.
 
+# Getting Started
+
+Start up a MySQL database in docker.
+
+Use the following commands to startup a local server:
+
+```
+RECAPTCHA_SECRET_KEY=secret_code DB_PASSWORD=password PORT=3000 DB_PORT=3307 cargo run
+```
+
 # Database
 
 ## Init

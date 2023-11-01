@@ -8,9 +8,7 @@ use axum::{
 };
 use http::StatusCode;
 use mysql_async::Pool;
-use serde::ser::Serialize;
 use tera::{Context, Tera};
-use unic_langid::LanguageIdentifier;
 
 mod i18n;
 
@@ -20,7 +18,7 @@ use crate::{
     lists::model::{Item, List},
 };
 
-use self::i18n::Localizer;
+use self::i18n::{LanguageIdentifierExtractorLayer, Localizer, TeraLanguageIdentifier};
 
 macro_rules! return_if_not_logged_in {
     ($claim: expr) => {{
@@ -29,33 +27,6 @@ macro_rules! return_if_not_logged_in {
         }
 
         $claim.unwrap()
-    }};
-}
-
-struct TeraLanguageIdentifier(LanguageIdentifier);
-
-impl Serialize for TeraLanguageIdentifier {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(self.0.to_string().as_str())
-    }
-}
-
-macro_rules! unpack_lang {
-    ($lang_id: expr, $redirect: expr) => {{
-        let lang = $lang_id.parse::<LanguageIdentifier>();
-        if lang.is_err() {
-            return StatusCode::NOT_FOUND.into_response();
-        }
-        let lang = lang.unwrap();
-
-        if !i18n::supported(&lang) {
-            return Redirect::permanent($redirect).into_response();
-        }
-
-        TeraLanguageIdentifier(lang)
     }};
 }
 
@@ -137,7 +108,11 @@ impl ViewRouter {
                     }),
                 )
                 .route("/families", get(view_families))
-                .layer(JwTokenReaderLayer)
+                .layer(
+                    tower::ServiceBuilder::new()
+                        .layer(LanguageIdentifierExtractorLayer)
+                        .layer(JwTokenReaderLayer),
+                )
                 .with_state(ViewRouterState::new(pool)),
         )
     }
@@ -152,11 +127,9 @@ impl Into<Router> for ViewRouter {
 async fn lists_view(
     State(state): State<ArcedState>,
     claim: Option<Extension<Claims>>,
-    Path(lang_id): Path<String>,
+    Extension(lang): Extension<TeraLanguageIdentifier>,
 ) -> axum::response::Response {
     let claim = return_if_not_logged_in!(claim);
-
-    let lang = unpack_lang!(lang_id, "/en/lists");
 
     // TODO join futures
     let lists: Vec<String> = List::paginate(state.pool.clone(), claim.sub)

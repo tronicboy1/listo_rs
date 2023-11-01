@@ -3,6 +3,11 @@ use std::collections::HashMap;
 use fluent::{bundle::FluentBundle, FluentResource};
 use unic_langid::{langid, LanguageIdentifier};
 
+mod language_identifier;
+
+pub use language_identifier::LanguageIdentifierExtractorLayer;
+pub use language_identifier::TeraLanguageIdentifier;
+
 pub const ENGLISH: LanguageIdentifier = langid!("en");
 pub const JAPANESE: LanguageIdentifier = langid!("ja");
 
