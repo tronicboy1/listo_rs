@@ -20,13 +20,13 @@ export class ListoRegistration extends LitElement {
   connectedCallback() {
     this._form.addEventListener("submit", this.handleSubmit);
     this._loginButton.addEventListener("click", () => {
-      this._loginButton.classList.add("active");
-      this._registerButton.classList.remove("active");
+      this._loginButton.classList.add("inactive");
+      this._registerButton.classList.remove("inactive");
       this._mode = "LOGIN";
     });
     this._registerButton.addEventListener("click", () => {
-      this._registerButton.classList.add("active");
-      this._loginButton.classList.remove("active");
+      this._registerButton.classList.add("inactive");
+      this._loginButton.classList.remove("inactive");
       this._mode = "REGISTER";
     });
   }

@@ -51,11 +51,11 @@ button,
   justify-content: center;
 }
 
-.active {
+.inactive {
   background-color: var(--secondary-color);
   border-color: var(--secondary-color);
 }
-.active:hover {
+.inactive:hover {
   background-color: var(--secondary-color);
   border-color: var(--secondary-color);
 }

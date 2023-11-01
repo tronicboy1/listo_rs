@@ -3,26 +3,32 @@
 <script src="https://www.google.com/recaptcha/api.js?render=6LcuLlsgAAAAADL_n_1hS7zeQMKX6xbi10jQYIYR"></script>
 {% endblock head %} {% block content %}
 <div class="card header">
-  <h1>Listo</h1>
-  <p>An elegant List Manager</p>
+  <h1>{{ fluent(key="login-header", lang=lang) }}</h1>
+  <p>{{ fluent(key="login-header-subtext", lang=lang) }}</p>
 </div>
 <div class="card">
   <listo-registration mode="login">
     <div class="button-group">
-      <button class="button-left button active" id="login-button">Login</button>
-      <button class="button button-right" id="register-button">Register</button>
+      <button class="button-left button inactive" id="login-button">
+        {{ fluent(key="listo-registration-login-button", lang=lang) }}
+      </button>
+      <button class="button button-right" id="register-button">
+        {{ fluent(key="listo-registration-register-button", lang=lang) }}
+      </button>
     </div>
 
     <form class="login-form" id="login-form">
       <div class="form-group">
-        <label for="email">Email</label>
+        <label for="email">{{ fluent(key="listo-registration-login-form-email-label", lang=lang) }}</label>
         <input id="email" name="email" type="email" required autocomplete="email" />
       </div>
       <div class="form-group">
-        <label for="password">Password</label>
+        <label for="password">{{ fluent(key="listo-registration-login-form-password-label", lang=lang) }}</label>
         <input id="password" name="password" type="password" required autocomplete="current-password" />
       </div>
-      <button id="submit" type="submit">Submit</button>
+      <button id="submit" type="submit">
+        {{ fluent(key="listo-registration-login-form-submit-label", lang=lang) }}
+      </button>
     </form>
   </listo-registration>
 </div>
