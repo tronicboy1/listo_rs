@@ -68,23 +68,33 @@ impl tera::Function for Localizer {
 }
 
 macro_rules! create_bundle {
-    ($path: expr, $locales: expr) => {{
-        let ftl = std::fs::read_to_string($path).expect("FTL File not found");
-        let ftl = FluentResource::try_new(ftl).expect("FTL Parse Error");
+    ($locales: expr, $($path: expr),+) => {{
         let mut bundle = FluentBundle::new_concurrent($locales);
-        bundle.add_resource(ftl).expect("unable to add resource");
+
+        $({
+            let ftl = std::fs::read_to_string($path).expect("FTL File not found");
+            let ftl = FluentResource::try_new(ftl).expect("FTL Parse Error");
+            bundle.add_resource(ftl).expect("unable to add resource");
+        })+
 
         bundle
     }};
+    ($locales: expr, $($path: expr,)+) => {
+        create_bundle!($locales, $($path),+)
+    };
 }
 
 fn init() -> Locales {
     let mut locales: Locales = HashMap::new();
 
-    let en = create_bundle!("locales/en/main.ftl", vec![ENGLISH]);
+    let en = create_bundle!(vec![ENGLISH], "locales/en/main.ftl", "locales/en/login.ftl");
     locales.insert(ENGLISH.language, en);
 
-    let ja = create_bundle!("locales/ja/main.ftl", vec![JAPANESE]);
+    let ja = create_bundle!(
+        vec![JAPANESE],
+        "locales/ja/main.ftl",
+        "locales/ja/login.ftl",
+    );
     locales.insert(JAPANESE.language, ja);
 
     locales
