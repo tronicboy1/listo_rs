@@ -20,6 +20,6 @@ serde_json = "1.0.108"
 tera = "1.19.1"
 tokio = { version = "1.33.0", features = ["full"] }
 tower = "0.4.13"
-tower-http = { version = "0.4.4", features = ["fs"] }
+tower-http = { version = "0.4.4", features = ["fs", "compression-gzip"] }
 unic-langid = { version = "0.9.1", features = ["unic-langid-macros"] }
 validator = { version = "0.16.1", features = ["derive"] }

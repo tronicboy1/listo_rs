@@ -10,7 +10,7 @@ use listo_rs::{
     ws::handle_ws_req,
     AppState,
 };
-use tower_http::services::ServeDir;
+use tower_http::{compression::CompressionLayer, services::ServeDir};
 
 #[tokio::main]
 async fn main() {
@@ -34,7 +34,8 @@ async fn main() {
             "/api/v1/families",
             FamilyRouter::new(state.pool.clone()).into(),
         )
-        .nest_service("/assets", serve_dir);
+        .nest_service("/assets", serve_dir)
+        .layer(CompressionLayer::new());
 
     let port: u16 = std::env::var("PORT")
         .unwrap_or(String::from("3000"))
