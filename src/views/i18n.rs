@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use fluent::FluentArgs;
 use fluent::{bundle::FluentBundle, FluentResource};
 use unic_langid::subtags::Language;
 use unic_langid::{langid, LanguageIdentifier};
@@ -52,8 +53,14 @@ impl tera::Function for Localizer {
             .value()
             .ok_or(tera::Error::msg("No value in fluent message"))?;
 
+        let fluent_args: FluentArgs = args
+            .iter()
+            .filter(|(key, _)| key.as_str() != "lang" && key.as_str() != "key")
+            .filter_map(|(key, val)| val.as_str().map(|val| (key, val)))
+            .collect();
+
         let mut errs = Vec::new();
-        let res = bundle.format_pattern(pattern, None, &mut errs);
+        let res = bundle.format_pattern(pattern, Some(&fluent_args), &mut errs);
 
         if errs.len() > 0 {
             dbg!(errs);
@@ -85,7 +92,7 @@ macro_rules! create_bundle {
 }
 
 fn init() -> Locales {
-    let mut locales: Locales = HashMap::new();
+    let mut locales = HashMap::new();
 
     let en = create_bundle!(vec![ENGLISH], "locales/en/main.ftl", "locales/en/login.ftl");
     locales.insert(ENGLISH.language, en);
