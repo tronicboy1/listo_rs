@@ -69,6 +69,29 @@ CREATE TABLE user_passkeys (
   user_passkey_id SERIAL PRIMARY KEY,
   user_id BIGINT UNSIGNED NOT NULL,
   passkey VARCHAR(1023),
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+```
+
+#### user_reg_passkeys
+
+```sql
+CREATE TABLE user_reg_passkeys (
+  user_reg_passkey_id SERIAL PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  passkey VARCHAR(1023),
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  CONSTRAINT no_duplicate_passkeys UNIQUE (user_id)
+);
+```
+
+### user_auth_passkeys
+
+```sql
+CREATE TABLE user_auth_passkeys (
+  user_auth_passkey_id SERIAL PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  passkey VARCHAR(1023),
   FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
   CONSTRAINT no_duplicate_passkeys UNIQUE (user_id)
 );

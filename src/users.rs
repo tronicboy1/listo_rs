@@ -172,18 +172,13 @@ impl User {
 }
 
 macro_rules! set_passkey {
-    ($conn: ident, $user_id: ident, $passkey: ident) => {{
-        // Clear existing
-        let stmt = $conn
-            .prep("DELETE FROM user_passkeys WHERE user_id = ?;")
-            .await?;
-
-        let params = Params::Positional(vec![$user_id.into()]);
-        $conn.exec_drop(stmt, params).await?;
-
+    ($conn: ident, $user_id: ident, $passkey: ident, $table_name: expr) => {{
         // Add new passkey JSON
         let stmt = $conn
-            .prep("INSERT INTO user_passkeys (user_id, passkey) VALUES (?, ?);")
+            .prep(format!(
+                "INSERT INTO {} (user_id, passkey) VALUES (?, ?);",
+                $table_name
+            ))
             .await?;
 
         let passkey_json = serde_json::to_string($passkey).expect("invalid passkey");
@@ -194,9 +189,12 @@ macro_rules! set_passkey {
 }
 
 macro_rules! get_passkey {
-    ($conn: ident, $user_id: ident) => {{
+    ($conn: ident, $user_id: ident, $table_name: expr) => {{
         let stmt = $conn
-            .prep("SELECT passkey FROM user_passkeys WHERE user_id = ?")
+            .prep(format!(
+                "SELECT passkey FROM {} WHERE user_id = ?",
+                $table_name
+            ))
             .await?;
 
         let params = Params::Positional(vec![$user_id.into()]);
@@ -212,7 +210,7 @@ impl User {
         user_id: u64,
         passkey: &PasskeyRegistration,
     ) -> Result<(), mysql_async::Error> {
-        set_passkey!(conn, user_id, passkey)
+        set_passkey!(conn, user_id, passkey, "user_reg_passkeys")
     }
 
     pub async fn set_passkey(
@@ -220,21 +218,21 @@ impl User {
         user_id: u64,
         passkey: &Passkey,
     ) -> Result<(), mysql_async::Error> {
-        set_passkey!(conn, user_id, passkey)
+        set_passkey!(conn, user_id, passkey, "user_passkeys")
     }
 
     pub async fn get_reg_passkey(
         conn: &mut Conn,
         user_id: u64,
     ) -> Result<Option<PasskeyRegistration>, mysql_async::Error> {
-        get_passkey!(conn, user_id)
+        get_passkey!(conn, user_id, "user_reg_passkeys")
     }
 
     pub async fn get_passkey(
         conn: &mut Conn,
         user_id: u64,
     ) -> Result<Option<Passkey>, mysql_async::Error> {
-        get_passkey!(conn, user_id)
+        get_passkey!(conn, user_id, "user_passkeys")
     }
 }
 
