@@ -67,6 +67,12 @@ button:hover {
   border-radius: 4px 0 0 4px;
   flex: 1 0;
 }
+
+.button-middle {
+  border-radius: 0;
+  flex: 1 0;
+}
+
 .button-right {
   border-radius: 0 4px 4px 0;
   flex: 1 0;

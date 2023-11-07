@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use argon2::{
     password_hash::{rand_core::OsRng, SaltString},
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
@@ -7,14 +9,18 @@ use mysql_async::{
     Conn, Params,
 };
 use serde::ser::{Serialize, SerializeStruct};
+use uuid::Uuid;
+use webauthn_rs::prelude::*;
 
-use crate::{families::Family, find_col_or_err};
+use crate::{families::Family, find_col, find_col_or_err};
 
 #[derive(Debug)]
 pub struct User {
     pub user_id: u64,
     pub email: String,
     password: String,
+    pub is_temp: bool,
+    pub uuid: Option<Uuid>,
 }
 
 impl Serialize for User {
@@ -35,10 +41,17 @@ impl FromRow for User {
     where
         Self: Sized,
     {
+        let uuid = find_col::<String>(&mut row, "uuid")
+            .expect("uuid must be selected")
+            .ok()
+            .and_then(|uuid| Uuid::from_str(uuid.as_str()).ok());
+
         let user = User {
             user_id: find_col_or_err!(row, "user_id")?,
             email: find_col_or_err!(row, "email")?,
             password: find_col_or_err!(row, "password")?,
+            is_temp: find_col_or_err!(row, "is_temp")?,
+            uuid,
         };
 
         Ok(user)
@@ -58,7 +71,20 @@ impl User {
             user_id: 0,
             email: email,
             password: password_hash,
+            is_temp: false,
+            uuid: Some(Uuid::new_v4()),
         })
+    }
+
+    /// Web authn users are temp users until auth is finished. We need a uniqe id for authentication.
+    pub fn new_webauthn(email: &str, uuid: &Uuid) -> Self {
+        Self {
+            user_id: 0,
+            email: email.to_string(),
+            password: String::new(),
+            is_temp: true,
+            uuid: Some(uuid.clone()),
+        }
     }
 
     pub async fn get_by_id(
@@ -82,7 +108,7 @@ impl User {
 
     pub async fn insert(self, conn: &mut Conn) -> Result<u64, mysql_async::Error> {
         let stmt = conn
-            .prep("INSERT INTO users (email, `password`) VALUES (?, ?);")
+            .prep("INSERT INTO users (email, `password`, `is_temp`, `uuid`) VALUES (?, ?, ?, ?);")
             .await?;
 
         let params: mysql_async::Params = self.into();
@@ -94,6 +120,23 @@ impl User {
             .expect("Mysql guarantees ID comes back");
 
         Ok(id)
+    }
+
+    pub async fn update(self, conn: &mut Conn) -> Result<(), mysql_async::Error> {
+        let stmt = conn
+            .prep(
+                "UPDATE users SET email = ?, password = ?, is_temp = ?, uuid = ? WHERE user_id = ?",
+            )
+            .await?;
+
+        let params = Params::Positional(vec![
+            self.email.into(),
+            self.password.into(),
+            self.is_temp.into(),
+            self.uuid.map(|uuid| uuid.to_string()).into(),
+            self.user_id.into(),
+        ]);
+        conn.exec_drop(stmt, params).await
     }
 
     async fn destroy(conn: &mut Conn, user_id: u64) -> Result<(), mysql_async::Error> {
@@ -114,6 +157,11 @@ impl User {
     }
 
     pub fn confirm_password(&self, password: &str) -> Result<bool, argon2::password_hash::Error> {
+        // Temp users cannot pass checks
+        if self.is_temp {
+            return Ok(false);
+        }
+
         let parsed_hash = PasswordHash::new(&self.password)?;
         let argon2 = Argon2::default();
 
@@ -123,9 +171,81 @@ impl User {
     }
 }
 
+macro_rules! set_passkey {
+    ($conn: ident, $user_id: ident, $passkey: ident) => {{
+        // Clear existing
+        let stmt = $conn
+            .prep("DELETE FROM user_passkeys WHERE user_id = ?;")
+            .await?;
+
+        let params = Params::Positional(vec![$user_id.into()]);
+        $conn.exec_drop(stmt, params).await?;
+
+        // Add new passkey JSON
+        let stmt = $conn
+            .prep("INSERT INTO user_passkeys (user_id, passkey) VALUES (?, ?);")
+            .await?;
+
+        let passkey_json = serde_json::to_string($passkey).expect("invalid passkey");
+
+        let params = Params::Positional(vec![$user_id.into(), passkey_json.into()]);
+        $conn.exec_drop(stmt, params).await
+    }};
+}
+
+macro_rules! get_passkey {
+    ($conn: ident, $user_id: ident) => {{
+        let stmt = $conn
+            .prep("SELECT passkey FROM user_passkeys WHERE user_id = ?")
+            .await?;
+
+        let params = Params::Positional(vec![$user_id.into()]);
+        let json: Option<String> = $conn.exec_first(stmt, params).await?;
+
+        Ok(json.and_then(|json| serde_json::from_str(json.as_str()).ok()))
+    }};
+}
+
+impl User {
+    pub async fn set_reg_passkey(
+        conn: &mut Conn,
+        user_id: u64,
+        passkey: &PasskeyRegistration,
+    ) -> Result<(), mysql_async::Error> {
+        set_passkey!(conn, user_id, passkey)
+    }
+
+    pub async fn set_passkey(
+        conn: &mut Conn,
+        user_id: u64,
+        passkey: &Passkey,
+    ) -> Result<(), mysql_async::Error> {
+        set_passkey!(conn, user_id, passkey)
+    }
+
+    pub async fn get_reg_passkey(
+        conn: &mut Conn,
+        user_id: u64,
+    ) -> Result<Option<PasskeyRegistration>, mysql_async::Error> {
+        get_passkey!(conn, user_id)
+    }
+
+    pub async fn get_passkey(
+        conn: &mut Conn,
+        user_id: u64,
+    ) -> Result<Option<Passkey>, mysql_async::Error> {
+        get_passkey!(conn, user_id)
+    }
+}
+
 impl Into<mysql_async::Params> for User {
     fn into(self) -> mysql_async::Params {
-        mysql_async::Params::Positional(vec![self.email.into(), self.password.into()])
+        mysql_async::Params::Positional(vec![
+            self.email.into(),
+            self.password.into(),
+            self.is_temp.into(),
+            self.uuid.map(|uuid| uuid.to_string()).into(),
+        ])
     }
 }
 

@@ -1,17 +1,23 @@
 const SECRET_KEY: &'static [u8] = b"my-secret";
 
+use std::sync::Arc;
+
 use axum::{
     extract::State,
     http::StatusCode,
-    response::{AppendHeaders, IntoResponse, Redirect},
+    response::{AppendHeaders, IntoResponse, Redirect, Response},
     routing::{get, post},
     Json, Router,
 };
-use cookie::{time::OffsetDateTime, Cookie};
-use http::header::SET_COOKIE;
+use cookie::{
+    time::{Duration, OffsetDateTime},
+    Cookie,
+};
+use http::{header::SET_COOKIE, HeaderMap};
 use jsonwebtoken::{encode, EncodingKey};
 use mysql_async::Pool;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use validator::Validate;
 pub struct AuthRouter(Router);
 
@@ -20,17 +26,28 @@ mod token_reader;
 
 pub use token_guard::AuthGuardLayer;
 pub use token_reader::JwTokenReaderLayer;
+use url::Url;
+use webauthn_rs::{prelude::RegisterPublicKeyCredential, Webauthn, WebauthnBuilder};
 
 use crate::{get_conn, users::User};
 
 #[derive(Debug, Clone)]
 struct AuthState {
     pool: Pool,
+    webauthn: Arc<Webauthn>,
 }
 
 impl AuthState {
     fn new(pool: Pool) -> Self {
-        Self { pool }
+        let domain = "localhost";
+        let origin = Url::parse("http://localhost:3000").expect("invalid url");
+        let webauthn_builder = WebauthnBuilder::new(domain, &origin)
+            .expect("invalid config webauthn")
+            .rp_name("Listor RS");
+
+        let webauthn = Arc::new(webauthn_builder.build().expect("Invalid webauthn config"));
+
+        Self { pool, webauthn }
     }
 }
 
@@ -53,6 +70,8 @@ impl AuthRouter {
                         )
                     }),
                 )
+                .route("/webauthn/registration/start", post(webauthn_start_reg))
+                .route("/webauthn/registration/finish", post(webauthn_finish_reg))
                 .with_state(AuthState::new(pool)),
         )
     }
@@ -119,7 +138,7 @@ macro_rules! return_400_if_bad_recaptcha {
 }
 
 async fn create_user(
-    State(AuthState { pool }): State<AuthState>,
+    State(AuthState { pool, .. }): State<AuthState>,
     Json(user_body): Json<UserBody>,
 ) -> Result<axum::response::Response, StatusCode> {
     return_400_if_bad_recaptcha!(&user_body.token);
@@ -161,7 +180,7 @@ async fn create_user(
 }
 
 async fn login(
-    State(AuthState { pool }): State<AuthState>,
+    State(AuthState { pool, .. }): State<AuthState>,
     Json(UserBody {
         email,
         password,
@@ -221,6 +240,94 @@ async fn verify_recaptcha_token(token: &str) -> Result<bool, Box<dyn std::error:
     let RecaptchaResponse { success } = res.json::<RecaptchaResponse>().await?;
 
     Ok(success)
+}
+
+#[derive(Debug, Deserialize)]
+struct WebauthnOptionsBody {
+    email: String,
+}
+async fn webauthn_start_reg(
+    State(AuthState { pool, webauthn }): State<AuthState>,
+    Json(WebauthnOptionsBody { email }): Json<WebauthnOptionsBody>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let mut conn = pool.get_conn().await.expect("sql error");
+    let user_exists = User::get_by_email(&mut conn, &email)
+        .await
+        .expect("sql error");
+    if user_exists.is_some() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let uuid = Uuid::new_v4();
+    let user = User::new_webauthn(&email, &uuid);
+    let user_id = user.insert(&mut conn).await.expect("could not create user");
+
+    let res = match webauthn.start_passkey_registration(uuid, &email, &email, None) {
+        Ok((ccr, state)) => {
+            User::set_reg_passkey(&mut conn, user_id, &state)
+                .await
+                .expect("Sql error");
+
+            let user_id_cookie = Cookie::build(("temp_user_id", user_id.to_string()))
+                .path("/api/v1/auth/")
+                .max_age(Duration::minutes(5))
+                .to_string();
+            (AppendHeaders([(SET_COOKIE, user_id_cookie)]), Json(ccr))
+        }
+        Err(error) => {
+            dbg!(error);
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    };
+
+    Ok(res)
+}
+
+async fn webauthn_finish_reg(
+    State(AuthState { pool, webauthn }): State<AuthState>,
+    headers: HeaderMap,
+    Json(reg): Json<RegisterPublicKeyCredential>,
+) -> Response {
+    let user_id = headers
+        .get("Cookie")
+        .and_then(|cookie| cookie.to_str().ok())
+        .and_then(|cookies| {
+            Cookie::split_parse(cookies)
+                .filter_map(|cookie| cookie.ok())
+                .find(|cookie| cookie.name() == "temp_user_id")
+        })
+        .and_then(|cookie| cookie.value().parse::<u64>().ok());
+
+    if let Some(user_id) = user_id {
+        let mut conn = pool.get_conn().await.expect("Sql Error");
+
+        let passkey = User::get_reg_passkey(&mut conn, user_id)
+            .await
+            .expect("Sql Error");
+
+        if let Some(passkey) = passkey {
+            return match webauthn.finish_passkey_registration(&reg, &passkey) {
+                Ok(sk) => {
+                    User::set_passkey(&mut conn, user_id, &sk)
+                        .await
+                        .expect("Sql Error");
+
+                    let claims_token = Claims::new(user_id)
+                        .token()
+                        .expect("JWT token creation error");
+                    let cookie = Cookie::build(("jwt", claims_token)).path("/").to_string();
+
+                    (StatusCode::OK, AppendHeaders([(SET_COOKIE, cookie)])).into_response()
+                }
+                Err(error) => {
+                    dbg!(error);
+                    StatusCode::BAD_REQUEST.into_response()
+                }
+            };
+        }
+    }
+
+    StatusCode::BAD_REQUEST.into_response()
 }
 
 #[cfg(test)]

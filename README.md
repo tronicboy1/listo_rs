@@ -56,8 +56,22 @@ CREATE TABLE users (
   user_id SERIAL PRIMARY KEY,
   email VARCHAR(320) NOT NULL,
   `password` VARCHAR(255) NOT NULL,
+  `is_temp` TINYINT(1) NOT NULL DEFAULT 0,
+  `uuid` VARCHAR(36) NOT NULL,
   UNIQUE(email)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+#### user_passkeys
+
+```sql
+CREATE TABLE user_passkeys (
+  user_passkey_id SERIAL PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  passkey VARCHAR(1023),
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  CONSTRAINT no_duplicate_passkeys UNIQUE (user_id)
+);
 ```
 
 ### Users-Families
