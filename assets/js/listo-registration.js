@@ -98,7 +98,6 @@ export class ListoRegistration extends LitElement {
             })
               .then(res => res.json())
               .then(ccr => {
-                console.log(decodeB64(ccr.publicKey.challenge));
                 ccr.publicKey.challenge = decodeB64(ccr.publicKey.challenge);
                 ccr.publicKey.user.id = decodeB64(ccr.publicKey.user.id);
 
@@ -110,8 +109,6 @@ export class ListoRegistration extends LitElement {
                 }
 
                 const rawId = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
-
-                console.log(encodeB64(cred.response.clientDataJSON));
 
                 const credParsable = {
                   authenticatorAttachment: cred.authenticatorAttachment,
@@ -125,7 +122,6 @@ export class ListoRegistration extends LitElement {
                 };
 
                 const body = JSON.stringify(credParsable);
-                console.log(cred, body);
 
                 return fetch("/api/v1/auth/webauthn/registration/finish", {
                   method: "POST",
@@ -136,7 +132,11 @@ export class ListoRegistration extends LitElement {
                   body,
                 });
               })
-              .then(console.log)
+              .then(res => {
+                if (res.ok) {
+                  location.href = "/";
+                }
+              })
               .finally(() => {
                 this._loading = false;
               })
@@ -145,6 +145,61 @@ export class ListoRegistration extends LitElement {
         break;
 
       case "WEBAUTHN":
+        fetch("/api/v1/auth/webauthn/start", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({email}),
+        })
+          .then(res => res.json())
+          .then(ccr => {
+            ccr.publicKey.challenge = decodeB64(ccr.publicKey.challenge);
+            ccr.publicKey.allowCredentials.forEach(cred => {
+              cred.id = decodeB64(cred.id);
+            });
+
+            return navigator.credentials.get(ccr);
+          })
+          .then(cred => {
+            if (!cred) {
+              throw ReferenceError("Credentials not provided from browser");
+            }
+
+            const rawId = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+
+            const credParsable = {
+              authenticatorAttachment: cred.authenticatorAttachment,
+              rawId,
+              id: cred.id,
+              response: {
+                authenticatorData: encodeB64(cred.response.authenticatorData),
+                clientDataJSON: encodeB64(cred.response.clientDataJSON),
+                signature: encodeB64(cred.response.signature),
+                userHandle: encodeB64(cred.response.userHandle),
+              },
+              type: cred.type,
+            };
+
+            const body = JSON.stringify(credParsable);
+
+            return fetch("/api/v1/auth/webauthn/finish", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              credentials: "same-origin",
+              body,
+            });
+          })
+          .then(res => {
+            if (res.ok) {
+              location.href = "/";
+            }
+          })
+          .finally(() => {
+            this._loading = false;
+          });
         break;
 
       default:

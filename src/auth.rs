@@ -27,7 +27,10 @@ mod token_reader;
 pub use token_guard::AuthGuardLayer;
 pub use token_reader::JwTokenReaderLayer;
 use url::Url;
-use webauthn_rs::{prelude::RegisterPublicKeyCredential, Webauthn, WebauthnBuilder};
+use webauthn_rs::{
+    prelude::{PublicKeyCredential, RegisterPublicKeyCredential},
+    Webauthn, WebauthnBuilder,
+};
 
 use crate::{get_conn, users::User};
 
@@ -73,6 +76,7 @@ impl AuthRouter {
                 .route("/webauthn/registration/start", post(webauthn_start_reg))
                 .route("/webauthn/registration/finish", post(webauthn_finish_reg))
                 .route("/webauthn/start", post(webauthn_start_auth))
+                .route("/webauthn/finish", post(webauthn_finish_auth))
                 .with_state(AuthState::new(pool)),
         )
     }
@@ -303,11 +307,10 @@ async fn webauthn_start_reg(
                 .await
                 .expect("Sql error");
 
-            let user_id_cookie = Cookie::build(("temp_user_id", user_id.to_string()))
-                .path("/api/v1/auth/")
-                .max_age(Duration::minutes(5))
-                .to_string();
-            (AppendHeaders([(SET_COOKIE, user_id_cookie)]), Json(ccr))
+            (
+                AppendHeaders([(SET_COOKIE, create_temp_user_id_cookie(user_id))]),
+                Json(ccr),
+            )
         }
         Err(error) => {
             dbg!(error);
@@ -323,15 +326,7 @@ async fn webauthn_finish_reg(
     headers: HeaderMap,
     Json(reg): Json<RegisterPublicKeyCredential>,
 ) -> Response {
-    let user_id = headers
-        .get("Cookie")
-        .and_then(|cookie| cookie.to_str().ok())
-        .and_then(|cookies| {
-            Cookie::split_parse(cookies)
-                .filter_map(|cookie| cookie.ok())
-                .find(|cookie| cookie.name() == "temp_user_id")
-        })
-        .and_then(|cookie| cookie.value().parse::<u64>().ok());
+    let user_id = get_user_id_from_cookies(&headers);
 
     if let Some(user_id) = user_id {
         let mut conn = pool.get_conn().await.expect("Sql Error");
@@ -378,6 +373,7 @@ async fn webauthn_start_auth(
     Json(WebauthnOptionsBody { email }): Json<WebauthnOptionsBody>,
 ) -> axum::response::Response {
     let mut conn = pool.get_conn().await.expect("sql error");
+
     let user_exists = User::get_by_email(&mut conn, &email)
         .await
         .expect("sql error");
@@ -397,13 +393,80 @@ async fn webauthn_start_auth(
     let res = webauthn.start_passkey_authentication(&passkey);
 
     match res {
-        Ok((rcr, state)) => StatusCode::OK,
+        Ok((rcr, passkey)) => {
+            User::set_auth_passkey(&mut conn, user.user_id, &passkey)
+                .await
+                .expect("sql failed to set passkey");
+
+            (
+                AppendHeaders([(SET_COOKIE, create_temp_user_id_cookie(user.user_id))]),
+                Json(rcr),
+            )
+                .into_response()
+        }
         Err(err) => {
             dbg!(err);
-            StatusCode::UNAUTHORIZED
+            StatusCode::UNAUTHORIZED.into_response()
         }
     }
-    .into_response()
+}
+
+async fn webauthn_finish_auth(
+    State(AuthState { pool, webauthn }): State<AuthState>,
+    headers: HeaderMap,
+    Json(auth): Json<PublicKeyCredential>,
+) -> axum::response::Response {
+    let user_id = get_user_id_from_cookies(&headers);
+    if let Some(user_id) = user_id {
+        let mut conn = pool.get_conn().await.expect("Sql Error");
+
+        let passkey = User::get_auth_passkey(&mut conn, user_id)
+            .await
+            .expect("Sql Error");
+
+        if let Some(passkey) = passkey {
+            return match webauthn.finish_passkey_authentication(&auth, &passkey) {
+                Ok(_result) => {
+                    // TODO check login count
+                    // TODO increment counter
+
+                    let claims_token = Claims::new(user_id)
+                        .token()
+                        .expect("JWT token creation error");
+                    let cookie = Cookie::build(("jwt", claims_token)).path("/").to_string();
+
+                    (StatusCode::OK, AppendHeaders([(SET_COOKIE, cookie)])).into_response()
+                }
+                Err(err) => {
+                    dbg!(err);
+                    StatusCode::UNAUTHORIZED.into_response()
+                }
+            };
+        }
+    }
+
+    StatusCode::UNAUTHORIZED.into_response()
+}
+
+/// Creates a cookie that stores the user id for access between webauthn requests
+/// so the server can check that challenges are the same
+fn create_temp_user_id_cookie(user_id: u64) -> String {
+    Cookie::build(("temp_user_id", user_id.to_string()))
+        .path("/api/v1/auth/")
+        .max_age(Duration::minutes(5))
+        .to_string()
+}
+
+fn get_user_id_from_cookies(headers: &HeaderMap) -> Option<u64> {
+    headers
+        .get("Cookie")
+        .and_then(|cookie| cookie.to_str().ok())
+        .and_then(|cookies| {
+            Cookie::split_parse(cookies)
+                .filter_map(|cookie| cookie.ok())
+                .find(|cookie| cookie.name() == "temp_user_id")
+        })
+        .and_then(|cookie| cookie.value().parse::<u64>().ok())
 }
 
 #[cfg(test)]

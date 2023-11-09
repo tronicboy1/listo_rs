@@ -229,6 +229,14 @@ impl User {
         set_passkey!(conn, user_id, passkey, "user_passkeys")
     }
 
+    pub async fn set_auth_passkey(
+        conn: &mut Conn,
+        user_id: u64,
+        passkey: &PasskeyAuthentication,
+    ) -> Result<(), mysql_async::Error> {
+        set_passkey!(conn, user_id, passkey, "user_auth_passkeys")
+    }
+
     pub async fn get_reg_passkey(
         conn: &mut Conn,
         user_id: u64,
@@ -241,6 +249,13 @@ impl User {
         user_id: u64,
     ) -> Result<Option<Passkey>, mysql_async::Error> {
         get_passkey!(conn, user_id, "user_passkeys")
+    }
+
+    pub async fn get_auth_passkey(
+        conn: &mut Conn,
+        user_id: u64,
+    ) -> Result<Option<PasskeyAuthentication>, mysql_async::Error> {
+        get_passkey!(conn, user_id, "user_auth_passkeys")
     }
 }
 
