@@ -43,6 +43,7 @@ export class ListoRegistration extends LitElement {
       this._loginButton.classList.add("inactive");
       this._registerButton.classList.remove("inactive");
       this._webauthnButton.classList.remove("inactive");
+      this._webauthnNewButton.classList.remove("inactive");
       this.mode = "LOGIN";
     });
 
@@ -50,6 +51,7 @@ export class ListoRegistration extends LitElement {
       this._registerButton.classList.add("inactive");
       this._loginButton.classList.remove("inactive");
       this._webauthnButton.classList.remove("inactive");
+      this._webauthnNewButton.classList.remove("inactive");
       this.mode = "REGISTER";
     });
 
