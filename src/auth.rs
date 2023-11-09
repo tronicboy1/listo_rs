@@ -265,6 +265,15 @@ async fn webauthn_start_reg(
 
     // if account already exists
     let (user_id, uuid) = if let Some(mut user) = user_exists {
+        // If user exists, must check that passwords match
+        let password_valid = user
+            .confirm_password(&password)
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        if !password_valid {
+            return Ok(StatusCode::UNAUTHORIZED.into_response());
+        }
+
         let user_id = user.user_id;
 
         // add uuid if upgrading to webauthn and Uuid not available
@@ -274,7 +283,7 @@ async fn webauthn_start_reg(
             let uuid = Uuid::new_v4();
             user.uuid = Some(uuid);
 
-            user.update(&mut conn);
+            user.update(&mut conn).await.expect("Sql error on update");
 
             uuid
         };
@@ -393,7 +402,8 @@ async fn webauthn_start_auth(
             dbg!(err);
             StatusCode::UNAUTHORIZED
         }
-    }.into_response()
+    }
+    .into_response()
 }
 
 #[cfg(test)]

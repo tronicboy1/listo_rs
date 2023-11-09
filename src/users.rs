@@ -173,6 +173,14 @@ impl User {
 
 macro_rules! set_passkey {
     ($conn: ident, $user_id: ident, $passkey: ident, $table_name: expr) => {{
+        // Clear existing
+        let stmt = $conn
+            .prep(format!("DELETE FROM {} WHERE user_id = ?;", $table_name))
+            .await?;
+
+        let params = Params::Positional(vec![$user_id.into()]);
+        $conn.exec_drop(stmt, params).await?;
+
         // Add new passkey JSON
         let stmt = $conn
             .prep(format!(
