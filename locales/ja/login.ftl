@@ -12,6 +12,8 @@ listo-registration-register-button = 登録
 
 listo-registration-webauthn-button = WebAuth
 
+listo-registration-webauthn-new-button = WebAuth (新規)
+
 listo-registration-login-form-email-label = メールアドレス
 
 listo-registration-login-form-password-label = パスワード

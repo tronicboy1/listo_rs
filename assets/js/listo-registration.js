@@ -12,7 +12,7 @@ export class ListoRegistration extends LitElement {
   }
 
   /**
-   * @param {"LOGIN" | "REGISTER" | "WEBAUTHN"} val
+   * @param {"LOGIN" | "REGISTER" | "WEBAUTHN" | "WEBAUTHN-NEW"} val
    */
   set mode(val) {
     this._mode = val;
@@ -30,8 +30,9 @@ export class ListoRegistration extends LitElement {
     this._loginButton = /** @type {HTMLButtonElement} */ (this.querySelector("#login-button"));
     this._registerButton = /** @type {HTMLButtonElement} */ (this.querySelector("#register-button"));
     this._webauthnButton = /** @type {HTMLButtonElement} */ (this.querySelector("#webauthn-button"));
+    this._webauthnNewButton = /** @type {HTMLButtonElement} */ (this.querySelector("#webauthn-new-button"));
     this._passwordInput = /** @type {HTMLInputElement} */ (this.querySelector("input#password"));
-    /** @type {"LOGIN" | "REGISTER" | "WEBAUTHN"} */
+    /** @type {"LOGIN" | "REGISTER" | "WEBAUTHN" | "WEBAUTHN-NEW"} */
     this._mode = "LOGIN";
     this._loading = false;
   }
@@ -56,7 +57,16 @@ export class ListoRegistration extends LitElement {
       this._webauthnButton.classList.add("inactive");
       this._loginButton.classList.remove("inactive");
       this._registerButton.classList.remove("inactive");
+      this._webauthnNewButton.classList.remove("inactive");
       this.mode = "WEBAUTHN";
+    });
+
+    this._webauthnNewButton.addEventListener("click", () => {
+      this._webauthnNewButton.classList.add("inactive");
+      this._webauthnButton.classList.remove("inactive");
+      this._loginButton.classList.remove("inactive");
+      this._registerButton.classList.remove("inactive");
+      this.mode = "WEBAUTHN-NEW";
     });
   }
 
@@ -76,55 +86,65 @@ export class ListoRegistration extends LitElement {
 
     this._loading = true;
     switch (this.mode) {
-      case "WEBAUTHN":
-        fetch("/api/v1/auth/webauthn/registration/start", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({email}),
-        })
-          .then(res => res.json())
-          .then(ccr => {
-            console.log(decodeB64(ccr.publicKey.challenge));
-            ccr.publicKey.challenge = decodeB64(ccr.publicKey.challenge);
-            ccr.publicKey.user.id = decodeB64(ccr.publicKey.user.id);
-
-            return navigator.credentials.create(ccr);
-          })
-          .then(cred => {
-            if (!cred) {
-              throw ReferenceError("Credentials not provided from browser");
-            }
-
-            const rawId = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
-
-            console.log(encodeB64(cred.response.clientDataJSON));
-
-            const credParsable = {
-              authenticatorAttachment: cred.authenticatorAttachment,
-              rawId,
-              id: cred.id,
-              response: {
-                attestationObject: encodeB64(cred.response.attestationObject),
-                clientDataJSON: encodeB64(cred.response.clientDataJSON),
-              },
-              type: cred.type,
-            };
-
-            const body = JSON.stringify(credParsable);
-            console.log(cred, body);
-
-            return fetch("/api/v1/auth/webauthn/registration/finish", {
+      case "WEBAUTHN-NEW":
+        grecaptcha.ready(() => {
+          grecaptcha.execute("6LcuLlsgAAAAADL_n_1hS7zeQMKX6xbi10jQYIYR", {action: "submit"}).then(token =>
+            fetch("/api/v1/auth/webauthn/registration/start", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
               },
-              credentials: "same-origin",
-              body,
-            });
-          })
-          .then(console.log);
+              body: JSON.stringify({email, password, token}),
+            })
+              .then(res => res.json())
+              .then(ccr => {
+                console.log(decodeB64(ccr.publicKey.challenge));
+                ccr.publicKey.challenge = decodeB64(ccr.publicKey.challenge);
+                ccr.publicKey.user.id = decodeB64(ccr.publicKey.user.id);
+
+                return navigator.credentials.create(ccr);
+              })
+              .then(cred => {
+                if (!cred) {
+                  throw ReferenceError("Credentials not provided from browser");
+                }
+
+                const rawId = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+
+                console.log(encodeB64(cred.response.clientDataJSON));
+
+                const credParsable = {
+                  authenticatorAttachment: cred.authenticatorAttachment,
+                  rawId,
+                  id: cred.id,
+                  response: {
+                    attestationObject: encodeB64(cred.response.attestationObject),
+                    clientDataJSON: encodeB64(cred.response.clientDataJSON),
+                  },
+                  type: cred.type,
+                };
+
+                const body = JSON.stringify(credParsable);
+                console.log(cred, body);
+
+                return fetch("/api/v1/auth/webauthn/registration/finish", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  credentials: "same-origin",
+                  body,
+                });
+              })
+              .then(console.log)
+              .finally(() => {
+                this._loading = false;
+              })
+          );
+        });
+        break;
+
+      case "WEBAUTHN":
         break;
 
       default:
@@ -155,14 +175,12 @@ if (!customElements.get(tagName)) {
   customElements.define(tagName, ListoRegistration);
 }
 
-
 // Source: https://github.com/google/webauthndemo/blob/main/src/public/scripts/base64url.ts
 const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 const lookup = new Uint8Array(256);
 for (let i = 0; i < chars.length; i++) {
   lookup[chars.charCodeAt(i)] = i;
 }
-
 
 function encodeB64(arraybuffer) {
   const bytes = new Uint8Array(arraybuffer);

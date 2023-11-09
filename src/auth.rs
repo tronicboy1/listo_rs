@@ -72,6 +72,7 @@ impl AuthRouter {
                 )
                 .route("/webauthn/registration/start", post(webauthn_start_reg))
                 .route("/webauthn/registration/finish", post(webauthn_finish_reg))
+                .route("/webauthn/start", post(webauthn_start_auth))
                 .with_state(AuthState::new(pool)),
         )
     }
@@ -110,7 +111,6 @@ impl Claims {
 
 #[derive(Deserialize, Validate)]
 struct UserBody {
-    #[validate(length(min = 8))]
     password: String,
     #[validate(email)]
     email: String,
@@ -144,7 +144,9 @@ async fn create_user(
     return_400_if_bad_recaptcha!(&user_body.token);
 
     let is_valid = user_body.validate().is_ok();
-    if !is_valid {
+    let password_valid = user_body.password.bytes().count() > 7;
+
+    if !(is_valid && password_valid) {
         return Ok(StatusCode::BAD_REQUEST.into_response());
     }
 
@@ -248,19 +250,43 @@ struct WebauthnOptionsBody {
 }
 async fn webauthn_start_reg(
     State(AuthState { pool, webauthn }): State<AuthState>,
-    Json(WebauthnOptionsBody { email }): Json<WebauthnOptionsBody>,
-) -> Result<impl IntoResponse, StatusCode> {
+    Json(UserBody {
+        email,
+        password,
+        token,
+    }): Json<UserBody>,
+) -> Result<axum::response::Response, StatusCode> {
+    return_400_if_bad_recaptcha!(&token);
+
     let mut conn = pool.get_conn().await.expect("sql error");
     let user_exists = User::get_by_email(&mut conn, &email)
         .await
         .expect("sql error");
-    if user_exists.is_some() {
-        return Err(StatusCode::BAD_REQUEST);
-    }
 
-    let uuid = Uuid::new_v4();
-    let user = User::new_webauthn(&email, &uuid);
-    let user_id = user.insert(&mut conn).await.expect("could not create user");
+    // if account already exists
+    let (user_id, uuid) = if let Some(mut user) = user_exists {
+        let user_id = user.user_id;
+
+        // add uuid if upgrading to webauthn and Uuid not available
+        let uuid = if let Some(uuid) = user.uuid {
+            uuid
+        } else {
+            let uuid = Uuid::new_v4();
+            user.uuid = Some(uuid);
+
+            user.update(&mut conn);
+
+            uuid
+        };
+
+        (user_id, uuid)
+    } else {
+        let uuid = Uuid::new_v4();
+        let user = User::new_webauthn(&email, password, &uuid);
+        let user_id = user.insert(&mut conn).await.expect("could not create user");
+
+        (user_id, uuid)
+    };
 
     let res = match webauthn.start_passkey_registration(uuid, &email, &email, None) {
         Ok((ccr, state)) => {
@@ -280,7 +306,7 @@ async fn webauthn_start_reg(
         }
     };
 
-    Ok(res)
+    Ok(res.into_response())
 }
 
 async fn webauthn_finish_reg(
@@ -311,6 +337,14 @@ async fn webauthn_finish_reg(
                     User::set_passkey(&mut conn, user_id, &sk)
                         .await
                         .expect("Sql Error");
+                    let mut user = User::get_by_id(&mut conn, user_id)
+                        .await
+                        .expect("sql error")
+                        .expect("user must was deleted");
+
+                    user.is_temp = false;
+
+                    user.update(&mut conn).await.expect("sql error");
 
                     let claims_token = Claims::new(user_id)
                         .token()
@@ -328,6 +362,38 @@ async fn webauthn_finish_reg(
     }
 
     StatusCode::BAD_REQUEST.into_response()
+}
+
+async fn webauthn_start_auth(
+    State(AuthState { pool, webauthn }): State<AuthState>,
+    Json(WebauthnOptionsBody { email }): Json<WebauthnOptionsBody>,
+) -> axum::response::Response {
+    let mut conn = pool.get_conn().await.expect("sql error");
+    let user_exists = User::get_by_email(&mut conn, &email)
+        .await
+        .expect("sql error");
+
+    if user_exists.is_none() {
+        return StatusCode::BAD_REQUEST.into_response();
+    }
+
+    let user = user_exists.unwrap();
+
+    let passkey = User::get_passkey(&mut conn, user.user_id)
+        .await
+        .expect("Sql Error")
+        .expect("Registration Failed");
+    let passkey = vec![passkey];
+
+    let res = webauthn.start_passkey_authentication(&passkey);
+
+    match res {
+        Ok((rcr, state)) => StatusCode::OK,
+        Err(err) => {
+            dbg!(err);
+            StatusCode::UNAUTHORIZED
+        }
+    }.into_response()
 }
 
 #[cfg(test)]

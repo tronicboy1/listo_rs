@@ -12,6 +12,8 @@ listo-registration-register-button = Register
 
 listo-registration-webauthn-button = WebAuth
 
+listo-registration-webauthn-new-button = WebAuth (New)
+
 listo-registration-login-form-email-label = Email
 
 listo-registration-login-form-password-label = Password

@@ -77,11 +77,11 @@ impl User {
     }
 
     /// Web authn users are temp users until auth is finished. We need a uniqe id for authentication.
-    pub fn new_webauthn(email: &str, uuid: &Uuid) -> Self {
+    pub fn new_webauthn(email: &str, password: String, uuid: &Uuid) -> Self {
         Self {
             user_id: 0,
             email: email.to_string(),
-            password: String::new(),
+            password,
             is_temp: true,
             uuid: Some(uuid.clone()),
         }
