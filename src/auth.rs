@@ -288,7 +288,7 @@ async fn webauthn_start_reg(
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
         if !password_valid {
-            return Ok(StatusCode::UNAUTHORIZED.into_response());
+            return Ok((StatusCode::UNAUTHORIZED, "invalid password").into_response());
         }
 
         let user_id = user.user_id;
