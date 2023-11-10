@@ -1,4 +1,4 @@
-import { fromEvent as $, startWith as q, map as G, switchMap as Q, of as X, Subject as Z, retry as N, takeUntil as tt } from "rxjs";
+import { fromEvent as q, startWith as G, map as Q, switchMap as X, of as Z, catchError as N, Subject as tt, retry as et, takeUntil as rt } from "rxjs";
 var P = function(r, e) {
   return P = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(t, n) {
     t.__proto__ = n;
@@ -67,13 +67,13 @@ function E(r, e, t) {
 function v(r) {
   return typeof r == "function";
 }
-function J(r) {
+function L(r) {
   var e = function(n) {
     Error.call(n), n.stack = new Error().stack;
   }, t = r(e);
   return t.prototype = Object.create(Error.prototype), t.prototype.constructor = t, t;
 }
-var T = J(function(r) {
+var T = L(function(r) {
   return function(t) {
     r(this), this.message = t ? t.length + ` errors occurred during unsubscription:
 ` + t.map(function(n, i) {
@@ -178,14 +178,14 @@ var _ = function() {
     var e = new r();
     return e.closed = !0, e;
   }(), r;
-}(), L = _.EMPTY;
-function H(r) {
+}(), H = _.EMPTY;
+function Y(r) {
   return r instanceof _ || r && "closed" in r && v(r.remove) && v(r.add) && v(r.unsubscribe);
 }
 function M(r) {
   v(r) ? r() : r.unsubscribe();
 }
-var Y = {
+var K = {
   onUnhandledError: null,
   onStoppedNotification: null,
   Promise: void 0,
@@ -204,7 +204,7 @@ var Y = {
   },
   delegate: void 0
 };
-function et(r) {
+function nt(r) {
   I.setTimeout(function() {
     throw r;
   });
@@ -218,7 +218,7 @@ var F = function(r) {
   b(e, r);
   function e(t) {
     var n = r.call(this) || this;
-    return n.isStopped = !1, t ? (n.destination = t, H(t) && t.add(n)) : n.destination = ot, n;
+    return n.isStopped = !1, t ? (n.destination = t, Y(t) && t.add(n)) : n.destination = ut, n;
   }
   return e.create = function(t, n, i) {
     return new U(t, n, i);
@@ -245,11 +245,11 @@ var F = function(r) {
       this.unsubscribe();
     }
   }, e;
-}(_), rt = Function.prototype.bind;
+}(_), it = Function.prototype.bind;
 function x(r, e) {
-  return rt.call(r, e);
+  return it.call(r, e);
 }
-var nt = function() {
+var ot = function() {
   function r(e) {
     this.partialObserver = e;
   }
@@ -292,7 +292,7 @@ var nt = function() {
       };
     else {
       var u;
-      o && Y.useDeprecatedNextContext ? (u = Object.create(t), u.unsubscribe = function() {
+      o && K.useDeprecatedNextContext ? (u = Object.create(t), u.unsubscribe = function() {
         return o.unsubscribe();
       }, s = {
         next: t.next && x(t.next, u),
@@ -300,35 +300,35 @@ var nt = function() {
         complete: t.complete && x(t.complete, u)
       }) : s = t;
     }
-    return o.destination = new nt(s), o;
+    return o.destination = new ot(s), o;
   }
   return e;
 }(F);
 function S(r) {
-  et(r);
+  nt(r);
 }
-function it(r) {
+function st(r) {
   throw r;
 }
-var ot = {
+var ut = {
   closed: !0,
   next: R,
-  error: it,
+  error: st,
   complete: R
-}, st = function() {
+}, ct = function() {
   return typeof Symbol == "function" && Symbol.observable || "@@observable";
 }();
-function ut(r) {
+function at(r) {
   return r;
 }
-function ct(r) {
-  return r.length === 0 ? ut : r.length === 1 ? r[0] : function(t) {
+function ft(r) {
+  return r.length === 0 ? at : r.length === 1 ? r[0] : function(t) {
     return r.reduce(function(n, i) {
       return i(n);
     }, t);
   };
 }
-var k = function() {
+var O = function() {
   function r(e) {
     e && (this._subscribe = e);
   }
@@ -336,7 +336,7 @@ var k = function() {
     var t = new r();
     return t.source = this, t.operator = e, t;
   }, r.prototype.subscribe = function(e, t, n) {
-    var i = this, o = ft(e) ? e : new U(e, t, n);
+    var i = this, o = pt(e) ? e : new U(e, t, n);
     return w(function() {
       var s = i, u = s.operator, c = s.source;
       o.add(u ? u.call(o, c) : c ? i._subscribe(o) : i._trySubscribe(o));
@@ -366,12 +366,12 @@ var k = function() {
   }, r.prototype._subscribe = function(e) {
     var t;
     return (t = this.source) === null || t === void 0 ? void 0 : t.subscribe(e);
-  }, r.prototype[st] = function() {
+  }, r.prototype[ct] = function() {
     return this;
   }, r.prototype.pipe = function() {
     for (var e = [], t = 0; t < arguments.length; t++)
       e[t] = arguments[t];
-    return ct(e)(this);
+    return ft(e)(this);
   }, r.prototype.toPromise = function(e) {
     var t = this;
     return e = z(e), new e(function(n, i) {
@@ -390,19 +390,19 @@ var k = function() {
 }();
 function z(r) {
   var e;
-  return (e = r ?? Y.Promise) !== null && e !== void 0 ? e : Promise;
+  return (e = r ?? K.Promise) !== null && e !== void 0 ? e : Promise;
 }
-function at(r) {
+function lt(r) {
   return r && v(r.next) && v(r.error) && v(r.complete);
 }
-function ft(r) {
-  return r && r instanceof F || at(r) && H(r);
+function pt(r) {
+  return r && r instanceof F || lt(r) && Y(r);
 }
-var lt = J(function(r) {
+var ht = L(function(r) {
   return function() {
     r(this), this.name = "ObjectUnsubscribedError", this.message = "object unsubscribed";
   };
-}), O = function(r) {
+}), k = function(r) {
   b(e, r);
   function e() {
     var t = r.call(this) || this;
@@ -413,7 +413,7 @@ var lt = J(function(r) {
     return n.operator = t, n;
   }, e.prototype._throwIfClosed = function() {
     if (this.closed)
-      throw new lt();
+      throw new ht();
   }, e.prototype.next = function(t) {
     var n = this;
     w(function() {
@@ -470,19 +470,19 @@ var lt = J(function(r) {
     return this._throwIfClosed(), this._checkFinalizedStatuses(t), this._innerSubscribe(t);
   }, e.prototype._innerSubscribe = function(t) {
     var n = this, i = this, o = i.hasError, s = i.isStopped, u = i.observers;
-    return o || s ? L : (this.currentObservers = null, u.push(t), new _(function() {
+    return o || s ? H : (this.currentObservers = null, u.push(t), new _(function() {
       n.currentObservers = null, C(u, t);
     }));
   }, e.prototype._checkFinalizedStatuses = function(t) {
     var n = this, i = n.hasError, o = n.thrownError, s = n.isStopped;
     i ? t.error(o) : s && t.complete();
   }, e.prototype.asObservable = function() {
-    var t = new k();
+    var t = new O();
     return t.source = this, t;
   }, e.create = function(t, n) {
     return new B(t, n);
   }, e;
-}(k), B = function(r) {
+}(O), B = function(r) {
   b(e, r);
   function e(t, n) {
     var i = r.call(this) || this;
@@ -499,17 +499,17 @@ var lt = J(function(r) {
     (n = (t = this.destination) === null || t === void 0 ? void 0 : t.complete) === null || n === void 0 || n.call(t);
   }, e.prototype._subscribe = function(t) {
     var n, i;
-    return (i = (n = this.source) === null || n === void 0 ? void 0 : n.subscribe(t)) !== null && i !== void 0 ? i : L;
+    return (i = (n = this.source) === null || n === void 0 ? void 0 : n.subscribe(t)) !== null && i !== void 0 ? i : H;
   }, e;
-}(O), K = {
+}(k), V = {
   now: function() {
-    return (K.delegate || Date).now();
+    return (V.delegate || Date).now();
   },
   delegate: void 0
 }, j = function(r) {
   b(e, r);
   function e(t, n, i) {
-    t === void 0 && (t = 1 / 0), n === void 0 && (n = 1 / 0), i === void 0 && (i = K);
+    t === void 0 && (t = 1 / 0), n === void 0 && (n = 1 / 0), i === void 0 && (i = V);
     var o = r.call(this) || this;
     return o._bufferSize = t, o._windowTime = n, o._timestampProvider = i, o._buffer = [], o._infiniteTimeWindow = !0, o._infiniteTimeWindow = n === 1 / 0, o._bufferSize = Math.max(1, t), o._windowTime = Math.max(1, n), o;
   }
@@ -529,7 +529,7 @@ var lt = J(function(r) {
       a && o.splice(0, a + 1);
     }
   }, e;
-}(O), pt = {
+}(k), dt = {
   url: "",
   deserializer: function(r) {
     return JSON.parse(r.data);
@@ -537,15 +537,15 @@ var lt = J(function(r) {
   serializer: function(r) {
     return JSON.stringify(r);
   }
-}, ht = "WebSocketSubject.error must be called with an object with an error code, and an optional reason: { code: number, reason: string }", dt = function(r) {
+}, vt = "WebSocketSubject.error must be called with an object with an error code, and an optional reason: { code: number, reason: string }", bt = function(r) {
   b(e, r);
   function e(t, n) {
     var i = r.call(this) || this;
-    if (i._socket = null, t instanceof k)
+    if (i._socket = null, t instanceof O)
       i.destination = n, i.source = t;
     else {
-      var o = i._config = W({}, pt);
-      if (i._output = new O(), typeof t == "string")
+      var o = i._config = W({}, dt);
+      if (i._output = new k(), typeof t == "string")
         o.url = t;
       else
         for (var s in t)
@@ -562,10 +562,10 @@ var lt = J(function(r) {
     var n = new e(this._config, this.destination);
     return n.operator = t, n.source = this, n;
   }, e.prototype._resetState = function() {
-    this._socket = null, this.source || (this.destination = new j()), this._output = new O();
+    this._socket = null, this.source || (this.destination = new j()), this._output = new k();
   }, e.prototype.multiplex = function(t, n, i) {
     var o = this;
-    return new k(function(s) {
+    return new O(function(s) {
       try {
         o.next(t());
       } catch (c) {
@@ -620,12 +620,12 @@ var lt = J(function(r) {
           try {
             var m = t._config.serializer;
             a.send(m(f));
-          } catch (V) {
-            t.destination.error(V);
+          } catch ($) {
+            t.destination.error($);
           }
       }, function(f) {
         var m = t._config.closingObserver;
-        m && m.next(void 0), f && f.code ? a.close(f.code, f.reason) : c.error(new TypeError(ht)), t._resetState();
+        m && m.next(void 0), f && f.code ? a.close(f.code, f.reason) : c.error(new TypeError(vt)), t._resetState();
       }, function() {
         var f = t._config.closingObserver;
         f && f.next(void 0), a.close(), t._resetState();
@@ -655,25 +655,34 @@ var lt = J(function(r) {
     t && (t.readyState === 1 || t.readyState === 0) && t.close(), this._resetState(), r.prototype.unsubscribe.call(this);
   }, e;
 }(B);
-function vt(r) {
-  return new dt(r);
+function D(r) {
+  return new bt(r);
 }
-function bt() {
-  const r = $(document, "visibilitychange").pipe(q(void 0));
-  return (e) => r.pipe(G(() => document.visibilityState === "visible"), Q((t) => t ? e : X()));
+function yt() {
+  const r = q(document, "visibilitychange").pipe(G(void 0));
+  return (e) => r.pipe(Q(() => document.visibilityState === "visible"), X((t) => t ? e : Z()));
 }
-const D = "listo-lists-manager";
-class yt extends HTMLElement {
+const J = "listo-lists-manager";
+class _t extends HTMLElement {
   constructor() {
-    super(...arguments), this.socket = vt({
-      url: "ws://" + location.host + "/ws",
+    super(...arguments), this.socket = D({
+      url: "wss://" + location.host + "/ws",
       deserializer(e) {
         return JSON.parse(e.data);
       }
-    }), this._teardown = new Z();
+    }).pipe(
+      N(
+        () => D({
+          url: "ws://" + location.host + "/ws",
+          deserializer(e) {
+            return JSON.parse(e.data);
+          }
+        })
+      )
+    ), this._teardown = new tt();
   }
   connectedCallback() {
-    this.socket.pipe(bt(), N({ count: 5, delay: 2e3 }), tt(this._teardown)).subscribe((e) => {
+    this.socket.pipe(yt(), et({ count: 5, delay: 2e3 }), rt(this._teardown)).subscribe((e) => {
       window.dispatchEvent(new CustomEvent("update-list", { detail: e }));
     });
   }
@@ -681,8 +690,8 @@ class yt extends HTMLElement {
     this._teardown.next();
   }
 }
-customElements.get(D) || customElements.define(D, yt);
+customElements.get(J) || customElements.define(J, _t);
 export {
-  yt as ListoListManager,
-  D as tagName
+  _t as ListoListManager,
+  J as tagName
 };

@@ -1,4 +1,4 @@
-import {Subject, retry, takeUntil, tap} from "rxjs";
+import {Subject, catchError, retry, takeUntil, tap} from "rxjs";
 import {webSocket} from "rxjs/webSocket";
 import {stopWhileHidden} from "@tronicboy/rxjs-operators";
 
@@ -11,11 +11,20 @@ export interface ItemChangeMessage {
 
 export class ListoListManager extends HTMLElement {
   socket = webSocket<ItemChangeMessage>({
-    url: "ws://" + location.host + "/ws",
+    url: "wss://" + location.host + "/ws",
     deserializer(e) {
       return JSON.parse(e.data);
     },
-  });
+  }).pipe(
+    catchError(() =>
+      webSocket<ItemChangeMessage>({
+        url: "ws://" + location.host + "/ws",
+        deserializer(e) {
+          return JSON.parse(e.data);
+        },
+      })
+    )
+  );
   private _teardown = new Subject<void>();
 
   connectedCallback() {
