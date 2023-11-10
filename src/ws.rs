@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::{
     extract::{
         ws::{Message, WebSocket},
@@ -15,7 +13,7 @@ use crate::{auth::Claims, AppState};
 pub async fn handle_ws_req(
     ws: WebSocketUpgrade,
     claim: Option<Extension<Claims>>,
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
 ) -> Response {
     if let Some(Extension(Claims { sub, .. })) = claim {
         ws.on_upgrade(move |socket| handle_socket(socket, sub, state))
@@ -24,7 +22,7 @@ pub async fn handle_ws_req(
     }
 }
 
-async fn handle_socket(mut socket: WebSocket, user_id: u64, state: Arc<AppState>) {
+async fn handle_socket(mut socket: WebSocket, user_id: u64, state: AppState) {
     let mut rx = state.new_item_tx.subscribe();
 
     while let Ok(item) = rx.recv().await {

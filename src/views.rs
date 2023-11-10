@@ -136,14 +136,14 @@ async fn lists_view(
     let claim = return_if_not_logged_in!(claim);
 
     // TODO join futures
-    let lists: Vec<String> = List::paginate(state.pool.clone(), claim.sub)
+    let lists: Vec<String> = List::paginate(&state.pool, claim.sub)
         .await
         .expect("Pagination failed")
         .iter()
         .map(|list| render_list(&state.tera, list, claim.sub, &lang))
         .collect();
 
-    let families = Family::paginate(state.pool.clone(), claim.sub, false)
+    let families = Family::paginate(&state.pool, claim.sub, false)
         .await
         .expect("Sql error");
 
@@ -164,7 +164,7 @@ async fn view_families(
 ) -> axum::response::Response {
     let claim = return_if_not_logged_in!(claim);
 
-    let families = Family::paginate(state.pool.clone(), claim.sub, true)
+    let families = Family::paginate(&state.pool, claim.sub, true)
         .await
         .expect("Sql Error");
 

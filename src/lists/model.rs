@@ -38,7 +38,7 @@ impl List {
             .expect("mysql guarantees id returned"))
     }
 
-    pub async fn paginate(pool: Pool, user_id: u64) -> Result<Vec<List>, mysql_async::Error> {
+    pub async fn paginate(pool: &Pool, user_id: u64) -> Result<Vec<List>, mysql_async::Error> {
         let mut conn = pool.get_conn().await?;
 
         let stmt = conn
@@ -74,6 +74,7 @@ impl List {
         conn.exec_first(stmt, vec![list_id]).await
     }
 
+    /// Loads items for a list. Must receive pool Arc copy so that it can be spawned in tokio.
     async fn load_items(mut self, pool: Pool) -> Result<Self, mysql_async::Error> {
         let mut conn = pool.get_conn().await?;
         let items: Vec<Item> = Item::get_by_list(&mut conn, self.list_id).await?;

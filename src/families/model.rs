@@ -63,7 +63,7 @@ impl Family {
     }
 
     pub async fn paginate(
-        pool: Pool,
+        pool: &Pool,
         user_id: u64,
         load_members: bool,
     ) -> Result<Vec<Self>, mysql_async::Error> {
@@ -213,7 +213,7 @@ mod tests {
 
         Family::add_member(&mut conn, family_id, 1).await.unwrap();
 
-        let families = Family::paginate(state.pool.clone(), 1, false)
+        let families = Family::paginate(&state.pool, 1, false)
             .await
             .unwrap();
         assert!(families
@@ -231,7 +231,7 @@ mod tests {
 
         Family::add_member(&mut conn, family_id, 1).await.unwrap();
 
-        let families = Family::paginate(state.pool.clone(), 1, true).await.unwrap();
+        let families = Family::paginate(&state.pool, 1, true).await.unwrap();
         assert!(families
             .iter()
             .find(|fam| fam.family_id == family_id)

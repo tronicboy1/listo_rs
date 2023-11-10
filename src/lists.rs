@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::{
     extract::{Path, State},
     response::IntoResponse,
@@ -28,6 +26,7 @@ pub mod model;
 
 pub struct ListRouter(Router);
 
+#[derive(Debug, Clone)]
 struct ListState {
     pool: Pool,
     new_item_tx: Sender<ItemChangeMessage>,
@@ -63,16 +62,16 @@ impl ListRouter {
 }
 
 impl ListState {
-    fn new(pool: Pool, new_item_tx: Sender<ItemChangeMessage>) -> Arc<Self> {
-        Arc::new(Self { pool, new_item_tx })
+    fn new(pool: Pool, new_item_tx: Sender<ItemChangeMessage>) -> Self {
+        Self { pool, new_item_tx }
     }
 }
 
 async fn get_lists(
-    State(state): State<Arc<ListState>>,
+    State(state): State<ListState>,
     Extension(user): Extension<Claims>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let lists = List::paginate(state.pool.clone(), user.sub)
+    let lists = List::paginate(&state.pool, user.sub)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -80,7 +79,7 @@ async fn get_lists(
 }
 
 async fn get_list(
-    State(state): State<Arc<ListState>>,
+    State(state): State<ListState>,
     Path(list_id): Path<u64>,
 ) -> Result<axum::response::Response, StatusCode> {
     let mut conn = get_conn!(state.pool)?;
@@ -96,7 +95,7 @@ async fn get_list(
 }
 
 async fn destroy_list(
-    State(state): State<Arc<ListState>>,
+    State(state): State<ListState>,
     Path(list_id): Path<u64>,
 ) -> Result<axum::response::Response, StatusCode> {
     let mut conn = get_conn!(state.pool)?;
@@ -122,7 +121,7 @@ struct NewListBody {
     family_id: u64,
 }
 async fn add_list(
-    State(state): State<Arc<ListState>>,
+    State(state): State<ListState>,
     Extension(user): Extension<Claims>,
     Json(NewListBody { name, family_id }): Json<NewListBody>,
 ) -> Result<axum::response::Response, StatusCode> {
@@ -145,7 +144,7 @@ async fn add_list(
 }
 
 async fn get_list_items(
-    State(state): State<Arc<ListState>>,
+    State(state): State<ListState>,
     Path(list_id): Path<u64>,
 ) -> Result<axum::response::Response, StatusCode> {
     let mut conn = get_conn!(state.pool)?;
@@ -171,7 +170,7 @@ struct ItemParams {
 }
 
 async fn add_item(
-    State(state): State<Arc<ListState>>,
+    State(state): State<ListState>,
     Path(list_id): Path<u64>,
     Extension(user): Extension<Claims>,
     Json(ItemParams { name }): Json<ItemParams>,
@@ -196,7 +195,7 @@ async fn add_item(
 }
 
 async fn delete_item(
-    State(state): State<Arc<ListState>>,
+    State(state): State<ListState>,
     Extension(user): Extension<Claims>,
     Path((list_id, item_id)): Path<(u64, u64)>,
 ) -> Result<impl IntoResponse, StatusCode> {

@@ -1,6 +1,5 @@
 use mysql_async::prelude::FromValue;
 use serde::Serialize;
-use std::sync::Arc;
 use tokio::sync::broadcast::{channel, Sender};
 
 pub mod auth;
@@ -13,7 +12,7 @@ pub mod users;
 pub mod views;
 pub mod ws;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AppState {
     pub origin: String,
     pub pool: mysql_async::Pool,
@@ -21,7 +20,7 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new() -> Arc<Self> {
+    pub fn new() -> Self {
         let db_password = std::env::var("DB_PASSWORD").expect("Must define DB_PASSWORD env var");
         let db_port: u16 = std::env::var("DB_PORT")
             .unwrap_or(String::from("3306"))
@@ -38,11 +37,11 @@ impl AppState {
 
         let (tx, _rx) = channel::<ItemChangeMessage>(100);
 
-        Arc::new(Self {
+        Self {
             origin: String::from("My Buthole 🙂"),
             pool: mysql_async::Pool::new(opts),
             new_item_tx: tx,
-        })
+        }
     }
 }
 

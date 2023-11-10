@@ -30,12 +30,9 @@ async fn main() {
         .nest("/images", ImagesRouter::new().into())
         .nest(
             "/api/v1/lists",
-            ListRouter::new(state.pool.clone(), state.new_item_tx.clone()).into(),
+            ListRouter::new(state.pool.clone(), state.new_item_tx).into(),
         )
-        .nest(
-            "/api/v1/families",
-            FamilyRouter::new(state.pool.clone()).into(),
-        )
+        .nest("/api/v1/families", FamilyRouter::new(state.pool).into())
         .nest_service("/assets", serve_dir)
         .nest_service("/.well-known/pki-validation", serve_cname)
         .layer(CompressionLayer::new());
