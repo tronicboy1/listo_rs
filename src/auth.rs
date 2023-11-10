@@ -105,14 +105,13 @@ impl Claims {
     }
 
     fn token(&self) -> Result<String, jsonwebtoken::errors::Error> {
-        let secret =
-            std::env::var("JWT_SECRET_KEY").map(|secret| secret.bytes().collect::<Vec<u8>>());
+        let secret = std::env::var("JWT_SECRET_KEY");
 
         encode(
             &jsonwebtoken::Header::default(),
             &self,
             &EncodingKey::from_secret(match secret.as_ref() {
-                Ok(secret) => secret,
+                Ok(secret) => secret.as_bytes(),
                 Err(_) => SECRET_KEY,
             }),
         )
