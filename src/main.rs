@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 
 use axum::{routing::get, Router};
+use axum_server::tls_rustls::RustlsConfig;
 use listo_rs::{
     auth::{AuthRouter, JwTokenReaderLayer},
     families::FamilyRouter,
@@ -53,9 +54,14 @@ async fn main() {
     let (_shutdown_tx, rx) = tokio::sync::oneshot::channel::<()>();
 
     // run it with hyper on localhost:3000
-    axum::Server::bind(&addr)
+    //axum::Server::bind(&addr)
+    let config = RustlsConfig::from_pem_file("certs/certificate.crt", "certs/private.key")
+        .await
+        .expect("could not read certs");
+
+    axum_server::bind_rustls(addr, config)
         .serve(app.into_make_service())
-        .with_graceful_shutdown(async move { rx.await.unwrap() })
+        // .with_graceful_shutdown(async move { rx.await.unwrap() })
         .await
         .unwrap();
 }

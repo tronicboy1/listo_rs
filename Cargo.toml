@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 argon2 = "0.5.2"
 axum = { version = "0.6.20", features = ["multipart", "ws"]}
+axum-server = { version = "0.5.1", features = ["tls-rustls"] }
 cookie = "0.18.0"
 fluent = "0.16.0"
 http = "0.2.9"
