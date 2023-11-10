@@ -31,14 +31,19 @@ export class ListoRegistration extends LitElement {
     this._registerButton = /** @type {HTMLButtonElement} */ (this.querySelector("#register-button"));
     this._webauthnButton = /** @type {HTMLButtonElement} */ (this.querySelector("#webauthn-button"));
     this._webauthnNewButton = /** @type {HTMLButtonElement} */ (this.querySelector("#webauthn-new-button"));
+    this._emailInput = /** @type {HTMLInputElement} */ (this.querySelector("input#email"));
     this._passwordInput = /** @type {HTMLInputElement} */ (this.querySelector("input#password"));
     /** @type {"LOGIN" | "REGISTER" | "WEBAUTHN" | "WEBAUTHN-NEW"} */
-    this._mode = "LOGIN";
+    this._mode = "WEBAUTHN";
     this._loading = false;
   }
 
   connectedCallback() {
     this._form.addEventListener("submit", this.handleSubmit);
+
+    const cachedEmail = localStorage.getItem("email-cache") ?? "";
+    this._emailInput.value = cachedEmail;
+
     this._loginButton.addEventListener("click", () => {
       this._loginButton.classList.add("inactive");
       this._registerButton.classList.remove("inactive");
@@ -85,6 +90,8 @@ export class ListoRegistration extends LitElement {
     const formData = new FormData(this._form);
     const email = formData.get("email");
     const password = formData.get("password");
+
+    localStorage.setItem("email-cache", String(email));
 
     this._loading = true;
     switch (this.mode) {

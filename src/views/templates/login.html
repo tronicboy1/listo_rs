@@ -7,9 +7,9 @@
   <p>{{ fluent(key="login-header-subtext", lang=lang) }}</p>
 </div>
 <div class="card">
-  <listo-registration mode="login">
+  <listo-registration mode="WEBAUTHN">
     <div class="button-group">
-      <button class="button-left button inactive" id="login-button">
+      <button class="button-left button" id="login-button">
         {{ fluent(key="listo-registration-login-button", lang=lang) }}
       </button>
       <button class="button button-right" id="register-button">
@@ -17,7 +17,7 @@
       </button>
     </div>
     <div class="button-group">
-      <button class="button button-left" id="webauthn-button">
+      <button class="button button-left inactive" id="webauthn-button">
         {{ fluent(key="listo-registration-webauthn-button", lang=lang) }}
       </button>
       <button class="button button-right" id="webauthn-new-button">
@@ -32,7 +32,7 @@
       </div>
       <div class="form-group">
         <label for="password">{{ fluent(key="listo-registration-login-form-password-label", lang=lang) }}</label>
-        <input id="password" name="password" type="password" required autocomplete="current-password" />
+        <input disabled id="password" name="password" type="password" required autocomplete="current-password" />
       </div>
       <button id="submit" type="submit">
         {{ fluent(key="listo-registration-login-form-submit-label", lang=lang) }}
