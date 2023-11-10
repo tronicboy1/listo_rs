@@ -53,15 +53,21 @@ async fn main() {
     // Can use oneshot to gracefully shutdown
     let (_shutdown_tx, rx) = tokio::sync::oneshot::channel::<()>();
 
-    // run it with hyper on localhost:3000
-    //axum::Server::bind(&addr)
-    let config = RustlsConfig::from_pem_file("certs/certificate.crt", "certs/private.key")
-        .await
-        .expect("could not read certs");
+    if std::env::var("USE_TLS").is_ok() {
+        let config = RustlsConfig::from_pem_file("certs/certificate.crt", "certs/private.key")
+            .await
+            .expect("could not read certs");
 
-    axum_server::bind_rustls(addr, config)
-        .serve(app.into_make_service())
-        // .with_graceful_shutdown(async move { rx.await.unwrap() })
-        .await
-        .unwrap();
+        axum_server::bind_rustls(addr, config)
+            .serve(app.into_make_service())
+            // .with_graceful_shutdown(async move { rx.await.unwrap() })
+            .await
+            .unwrap();
+    } else {
+        axum::Server::bind(&addr)
+            .serve(app.into_make_service())
+            .with_graceful_shutdown(async move { rx.await.unwrap() })
+            .await
+            .unwrap();
+    }
 }
