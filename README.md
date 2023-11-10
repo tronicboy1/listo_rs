@@ -12,6 +12,12 @@ Use the following commands to startup a local server:
 RECAPTCHA_SECRET_KEY=secret_code DB_PASSWORD=password PORT=3000 DB_PORT=3307 cargo run
 ```
 
+## Production run command
+
+```
+DB_PASSWORD=secret RECAPTCHA_SECRET_KEY=secret PORT=443 USE_TLS=true DOMAIN=mydomain.com ORIGIN=https://mydomain.com target/release/listo_rs
+```
+
 # Database
 
 ## Init
