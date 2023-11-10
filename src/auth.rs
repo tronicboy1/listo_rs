@@ -42,8 +42,16 @@ struct AuthState {
 
 impl AuthState {
     fn new(pool: Pool) -> Self {
-        let domain = "localhost";
-        let origin = Url::parse("http://localhost:3000").expect("invalid url");
+        let domain = std::env::var("DOMAIN");
+        let domain = domain.as_ref().map(|s| s.as_str()).unwrap_or("localhost");
+
+        let origin: Url = std::env::var("ORIGIN")
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or("http://localhost:3000")
+            .parse()
+            .expect("invalid ORIGIN provided");
+
         let webauthn_builder = WebauthnBuilder::new(domain, &origin)
             .expect("invalid config webauthn")
             .rp_name("Listor RS");
