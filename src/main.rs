@@ -17,6 +17,7 @@ async fn main() {
     let state = AppState::new();
 
     let serve_dir = ServeDir::new("assets");
+    let serve_cname = ServeDir::new("pki-validation");
 
     // build our application with a single route
     let app = Router::new()
@@ -35,6 +36,7 @@ async fn main() {
             FamilyRouter::new(state.pool.clone()).into(),
         )
         .nest_service("/assets", serve_dir)
+        .nest_service("/.well-known/pki-validation", serve_cname)
         .layer(CompressionLayer::new());
 
     let port: u16 = std::env::var("PORT")
