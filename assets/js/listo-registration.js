@@ -19,8 +19,10 @@ export class ListoRegistration extends LitElement {
 
     if (val === "WEBAUTHN") {
       this._passwordInput.toggleAttribute("disabled", true);
+      this._passwordInput.parentElement.style.display = "none";
     } else {
       this._passwordInput.toggleAttribute("disabled", false);
+      this._passwordInput.parentElement.style.display = "flex";
     }
   }
 
@@ -43,6 +45,10 @@ export class ListoRegistration extends LitElement {
 
     const cachedEmail = localStorage.getItem("email-cache") ?? "";
     this._emailInput.value = cachedEmail;
+
+    if (this._emailInput.validity.valid) {
+      this._form.requestSubmit();
+    }
 
     this._loginButton.addEventListener("click", () => {
       this._loginButton.classList.add("inactive");
