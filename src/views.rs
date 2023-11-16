@@ -32,21 +32,22 @@ macro_rules! return_if_not_logged_in {
 
 pub struct ViewRouter(Router);
 
-type ArcedState = Arc<ViewRouterState>;
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ViewRouterState {
     pool: Pool,
-    tera: Tera,
+    tera: Arc<Tera>,
 }
 
 impl ViewRouterState {
-    fn new(pool: Pool) -> Arc<Self> {
+    fn new(pool: Pool) -> Self {
         let mut tera = Tera::new("src/views/templates/**/*").expect("tera parsing error");
         let localizer = Localizer::new();
         tera.register_function("fluent", localizer);
 
-        Arc::new(Self { pool, tera })
+        Self {
+            pool,
+            tera: Arc::new(tera),
+        }
     }
 }
 
@@ -57,7 +58,7 @@ impl ViewRouter {
                 // Left for reference, not in use 20231101
                 // .route(
                 //     "/:lang/upload",
-                //     get(|State(state): State<ArcedState>| async move {
+                //     get(|State(state): State<ViewRouterState>| async move {
                 //         let mut context = Context::new();
                 //         context.insert("name", "austin");
                 //         let html = state
@@ -73,7 +74,7 @@ impl ViewRouter {
                 .route(
                     "/:lang/lists/:list_id",
                     get(
-                        |State(state): State<ArcedState>,
+                        |State(state): State<ViewRouterState>,
                          claim: Option<Extension<Claims>>,
                          Extension(lang): Extension<TeraLanguageIdentifier>,
                          Path((_, list_id)): Path<(String, u64)>| async move {
@@ -98,7 +99,7 @@ impl ViewRouter {
                 )
                 .route(
                     "/:lang/login",
-                    get(|State(state): State<ArcedState>,
+                    get(|State(state): State<ViewRouterState>,
                     Extension(lang): Extension<TeraLanguageIdentifier>,| async move {
                         let mut ctx = Context::new();
                         ctx.insert("lang", &lang);
@@ -129,7 +130,7 @@ impl Into<Router> for ViewRouter {
 }
 
 async fn lists_view(
-    State(state): State<ArcedState>,
+    State(state): State<ViewRouterState>,
     claim: Option<Extension<Claims>>,
     Extension(lang): Extension<TeraLanguageIdentifier>,
 ) -> axum::response::Response {
@@ -158,7 +159,7 @@ async fn lists_view(
 }
 
 async fn view_families(
-    State(state): State<ArcedState>,
+    State(state): State<ViewRouterState>,
     claim: Option<Extension<Claims>>,
     Extension(lang): Extension<TeraLanguageIdentifier>,
 ) -> axum::response::Response {
