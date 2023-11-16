@@ -26,6 +26,21 @@ async fn handle_socket(mut socket: WebSocket, user_id: u64, state: AppState) {
     let mut rx = state.new_item_tx.subscribe();
 
     while let Ok(item) = rx.recv().await {
+        // If the change originated from the current user, do not send
+        if item.user_id == user_id {
+            continue;
+        }
+
+        // If not a member, do not send
+        if item
+            .members
+            .iter()
+            .find(|mem_id| **mem_id == user_id)
+            .is_none()
+        {
+            continue;
+        }
+
         let json = serde_json::to_string(&item).expect("Invalid JSON");
 
         match socket.send(Message::Text(json)).await {

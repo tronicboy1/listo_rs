@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
 use mysql_async::{
     prelude::{FromRow, Queryable},
     Conn, Params, Pool, Value,
 };
-use serde::Serialize;
+use serde::{ser::SerializeStruct, Serialize};
 
 use crate::find_col_or_err;
 
@@ -215,6 +217,43 @@ impl Into<mysql_async::Params> for Item {
             Value::from(name),
             Value::from(amount),
         ])
+    }
+}
+
+/// Used when list data is changed to notify members of the list's family that they need to
+/// refresh the list.
+#[derive(Debug, Clone)]
+pub struct ItemChangeMessage {
+    pub user_id: u64,
+    pub list_id: u64,
+    // Avoid re-allocs of vec through clone.
+    pub members: Arc<Vec<u64>>,
+}
+
+impl Serialize for ItemChangeMessage {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("ItemChangeMessage", 2)?;
+
+        // Members not needed on frontend
+        state.skip_field("members")?;
+
+        state.serialize_field("user_id", &self.user_id)?;
+        state.serialize_field("list_id", &self.list_id)?;
+
+        state.end()
+    }
+}
+
+impl ItemChangeMessage {
+    pub fn new(user_id: u64, list_id: u64, members: Vec<u64>) -> Self {
+        Self {
+            user_id,
+            list_id,
+            members: Arc::new(members),
+        }
     }
 }
 

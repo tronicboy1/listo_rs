@@ -13,13 +13,14 @@ use tower::ServiceBuilder;
 use crate::{
     auth::{AuthGuardLayer, Claims, JwTokenReaderLayer},
     families::Family,
-    get_conn, map_internal_error, ItemChangeMessage,
+    get_conn, map_internal_error,
 };
 
 use self::{
     guard::ListGuardLayer,
     model::{Item, List},
 };
+pub use model::ItemChangeMessage;
 
 mod guard;
 pub mod model;
@@ -175,23 +176,34 @@ async fn add_item(
     Extension(user): Extension<Claims>,
     Json(ItemParams { name }): Json<ItemParams>,
 ) -> Result<impl IntoResponse, StatusCode> {
+    let mut conn = get_conn!(state.pool)?;
+
+    let list = map_internal_error!(List::get(&mut conn, list_id).await)?;
+
+    if list.is_none() {
+        return Ok(StatusCode::NOT_FOUND);
+    }
+
+    let list = list.unwrap();
+
     let item = Item::new(list_id, name);
 
-    let mut conn = get_conn!(state.pool)?;
     item.insert(&mut conn).await.map_err(|err| {
         dbg!(err);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    let members = map_internal_error!(Family::members(&mut conn, list.family_id).await)?
+        .into_iter()
+        .map(|user| user.user_id)
+        .collect();
+
     state
         .new_item_tx
-        .send(ItemChangeMessage {
-            list_id,
-            user_id: user.sub,
-        })
+        .send(ItemChangeMessage::new(user.sub, list_id, members))
         .unwrap();
 
-    Ok(())
+    Ok(StatusCode::CREATED)
 }
 
 async fn delete_item(
@@ -200,6 +212,15 @@ async fn delete_item(
     Path((list_id, item_id)): Path<(u64, u64)>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let mut conn = get_conn!(state.pool)?;
+
+    let list = map_internal_error!(List::get(&mut conn, list_id).await)?;
+
+    if list.is_none() {
+        return Ok(StatusCode::NOT_FOUND);
+    }
+
+    let list = list.unwrap();
+
     let item = Item::get(&mut conn, item_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -210,12 +231,16 @@ async fn delete_item(
 
     map_internal_error!(Item::delete(&mut conn, item_id).await)?;
 
+    let members = Family::members(&mut conn, list.family_id)
+        .await
+        .expect("Sql Error")
+        .into_iter()
+        .map(|user| user.user_id)
+        .collect();
+
     state
         .new_item_tx
-        .send(ItemChangeMessage {
-            user_id: user.sub,
-            list_id,
-        })
+        .send(ItemChangeMessage::new(user.sub, list_id, members))
         .unwrap();
 
     Ok(StatusCode::OK)

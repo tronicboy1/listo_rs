@@ -1,5 +1,5 @@
+use lists::ItemChangeMessage;
 use mysql_async::prelude::FromValue;
-use serde::Serialize;
 use tokio::sync::broadcast::{channel, Sender};
 
 pub mod auth;
@@ -65,12 +65,6 @@ where
         .find(|(_, col)| col.name_str() == col_name)?;
 
     row.take_opt(i)
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ItemChangeMessage {
-    pub user_id: u64,
-    pub list_id: u64,
 }
 
 #[macro_export]
