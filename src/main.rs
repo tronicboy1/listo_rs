@@ -5,7 +5,8 @@ use axum_server::tls_rustls::RustlsConfig;
 use listo_rs::{
     auth::{AuthRouter, JwTokenReaderLayer},
     families::FamilyRouter,
-    images::ImagesRouter,
+    // For reference, not in use
+    // images::ImagesRouter,
     lists::ListRouter,
     views::ViewRouter,
     ws::handle_ws_req,
@@ -27,7 +28,7 @@ async fn main() {
         .with_state(state.clone())
         .merge(ViewRouter::new(state.pool.clone()))
         .nest("/api/v1/auth", AuthRouter::new(state.pool.clone()).into())
-        .nest("/images", ImagesRouter::new().into())
+        // .nest("/images", ImagesRouter::new().into())
         .nest(
             "/api/v1/lists",
             ListRouter::new(state.pool.clone(), state.new_item_tx).into(),
