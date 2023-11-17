@@ -36,9 +36,8 @@ pub struct LanguageIdentifierExtractor<S> {
 
 impl<S, B> Service<Request<B>> for LanguageIdentifierExtractor<S>
 where
-    S: Service<Request<B>, Response = Response> + Send + 'static,
+    S: Service<Request<B>, Response = Response>,
     S::Future: Send + 'static,
-    B: Send + 'static,
 {
     type Error = S::Error;
     type Future =
@@ -67,7 +66,7 @@ where
 
             let ident = lang_code_from_headers(headers);
 
-            let target_lang = ident.unwrap_or(TeraLanguageIdentifier(ENGLISH));
+            let target_lang = ident.unwrap_or(ENGLISH);
 
             let redirect_uri = String::from("/") + target_lang.language.as_str() + req.uri().path();
 
@@ -106,12 +105,12 @@ fn lang_code_from_uri(uri: &Uri) -> Option<TeraLanguageIdentifier> {
 /// All modern browsers send the Accept-Language header to tell a server what content it should send
 ///
 /// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Language
-fn lang_code_from_headers(headers: &HeaderMap) -> Option<TeraLanguageIdentifier> {
+fn lang_code_from_headers(headers: &HeaderMap) -> Option<LanguageIdentifier> {
     let accept_lang = headers
         .get("Accept-Language")
         .and_then(|val| val.to_str().ok())?;
 
-    let lang_ident = accept_lang
+    accept_lang
         .parse::<LanguageIdentifier>()
         .ok()
         .and_then(|ident| if supported(&ident) { Some(ident) } else { None })
@@ -123,9 +122,7 @@ fn lang_code_from_headers(headers: &HeaderMap) -> Option<TeraLanguageIdentifier>
                 .map(|part| part.find(|c| c == ';').map(|i| &part[..i]).unwrap_or(part))
                 .filter_map(|ident_str| ident_str.parse::<LanguageIdentifier>().ok())
                 .find(|ident| supported(ident))
-        });
-
-    lang_ident.map(|ident| TeraLanguageIdentifier(ident))
+        })
 }
 
 #[cfg(test)]
@@ -165,7 +162,7 @@ mod tests {
         let ident = lang_code_from_headers(&headers).unwrap();
 
         let target = "en".parse::<LanguageIdentifier>().unwrap();
-        assert_eq!(ident.deref(), &target)
+        assert_eq!(ident, target)
     }
 
     #[test]
@@ -176,7 +173,7 @@ mod tests {
         let ident = lang_code_from_headers(&headers).unwrap();
 
         let target = "en-US".parse::<LanguageIdentifier>().unwrap();
-        assert_eq!(ident.deref(), &target)
+        assert_eq!(ident, target)
     }
 
     #[test]
@@ -190,7 +187,7 @@ mod tests {
         let ident = lang_code_from_headers(&headers).unwrap();
 
         let target = "en-US".parse::<LanguageIdentifier>().unwrap();
-        assert_eq!(ident.deref(), &target)
+        assert_eq!(ident, target)
     }
 
     #[test]
