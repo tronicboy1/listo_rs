@@ -14,6 +14,7 @@ use crate::{
     auth::{AuthGuardLayer, Claims, JwTokenReaderLayer},
     families::Family,
     get_conn, map_internal_error,
+    Insert,
 };
 
 use self::{

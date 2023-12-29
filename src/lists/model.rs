@@ -6,7 +6,7 @@ use mysql_async::{
 };
 use serde::{ser::SerializeStruct, Serialize};
 
-use crate::find_col_or_err;
+use crate::{find_col_or_err, Insert};
 
 #[derive(Debug, Serialize)]
 pub struct List {
@@ -14,6 +14,27 @@ pub struct List {
     pub name: String,
     pub family_id: u64,
     pub items: Option<Vec<Item>>,
+}
+
+impl Into<Params> for List {
+    fn into(self) -> Params {
+        Params::Positional(vec![
+            self.name.into(),
+            self.family_id.into(),
+            self.list_id.into(),
+        ])
+    }
+}
+
+impl Insert for List {
+    async fn insert_stmt<T>(conn: &mut T) -> Result<mysql_async::Statement, mysql_async::Error>
+    where
+        T: mysql_async::prelude::Queryable,
+        Self: Sized,
+    {
+        conn.prep("INSERT INTO lists (`name`, family_id, list_id) VALUES (?, ?, ?);")
+            .await
+    }
 }
 
 impl List {
@@ -24,20 +45,6 @@ impl List {
             items: None,
             family_id,
         }
-    }
-
-    pub async fn insert(self, conn: &mut Conn) -> Result<u64, mysql_async::Error> {
-        let stmt = conn
-            .prep("INSERT INTO lists (`name`, family_id) VALUES (?, ?);")
-            .await?;
-
-        let params = Params::Positional(vec![self.name.into(), self.family_id.into()]);
-        conn.exec_drop(stmt, params).await?;
-
-        Ok(conn
-            .exec_first("SELECT LAST_INSERT_ID();", ())
-            .await?
-            .expect("mysql guarantees id returned"))
     }
 
     pub async fn paginate(pool: &Pool, user_id: u64) -> Result<Vec<List>, mysql_async::Error> {

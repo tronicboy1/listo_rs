@@ -1,5 +1,8 @@
 use lists::ItemChangeMessage;
-use mysql_async::prelude::FromValue;
+use mysql_async::{
+    prelude::{FromValue, Queryable},
+    Conn, TxOpts,
+};
 use tokio::sync::broadcast::{channel, Sender};
 
 pub mod auth;
@@ -99,4 +102,53 @@ macro_rules! map_internal_error {
             StatusCode::INTERNAL_SERVER_ERROR
         })
     };
+}
+
+pub(crate) trait Insert: Into<mysql_async::Params> + Send + Sync {
+    async fn insert_stmt<T>(conn: &mut T) -> Result<mysql_async::Statement, mysql_async::Error>
+    where
+        T: mysql_async::prelude::Queryable,
+        Self: Sized;
+
+    async fn insert<T>(self, conn: &mut T) -> Result<u64, mysql_async::Error>
+    where
+        T: mysql_async::prelude::Queryable,
+    {
+        let stmt = Self::insert_stmt(&mut *conn).await?;
+
+        conn.exec_drop(stmt, self).await?;
+
+        let id = conn
+            .exec_first("SELECT LAST_INSERT_ID();", ())
+            .await?
+            .unwrap();
+
+        Ok(id)
+    }
+
+    async fn batch<T>(v: Vec<Self>, conn: &mut T) -> Result<(), mysql_async::Error>
+    where
+        T: mysql_async::prelude::Queryable,
+        Self: Sized,
+    {
+        let stmt = Self::insert_stmt(&mut *conn).await?;
+
+        conn.exec_batch(stmt, v.into_iter()).await
+    }
+}
+
+async fn insert_bulk_transaction<T>(conn: &mut Conn, v: Vec<T>) -> Result<(), mysql_async::Error>
+where
+    T: Insert,
+{
+    let mut t = conn.start_transaction(TxOpts::default()).await?;
+
+    let stmt = match v.first() {
+        Some(obj) => <T as Insert>::insert_stmt(&mut t).await?,
+        None => return Ok(()),
+    };
+
+    t.exec_batch(stmt, v.into_iter()).await?;
+
+    t.commit().await
 }
