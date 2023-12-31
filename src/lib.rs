@@ -105,16 +105,16 @@ macro_rules! map_internal_error {
 }
 
 pub(crate) trait Insert: Into<mysql_async::Params> + Send + Sync {
-    async fn insert_stmt<T>(conn: &mut T) -> Result<mysql_async::Statement, mysql_async::Error>
+    fn insert_stmt() -> &'static str
     where
-        T: mysql_async::prelude::Queryable,
         Self: Sized;
 
     async fn insert<T>(self, conn: &mut T) -> Result<u64, mysql_async::Error>
     where
         T: mysql_async::prelude::Queryable,
     {
-        let stmt = Self::insert_stmt(&mut *conn).await?;
+        let stmt = Self::insert_stmt();
+        let stmt = conn.prep(stmt).await?;
 
         conn.exec_drop(stmt, self).await?;
 
@@ -131,7 +131,7 @@ pub(crate) trait Insert: Into<mysql_async::Params> + Send + Sync {
         T: mysql_async::prelude::Queryable,
         Self: Sized,
     {
-        let stmt = Self::insert_stmt(&mut *conn).await?;
+        let stmt = Self::insert_stmt();
 
         conn.exec_batch(stmt, v.into_iter()).await
     }
@@ -144,9 +144,10 @@ where
     let mut t = conn.start_transaction(TxOpts::default()).await?;
 
     let stmt = match v.first() {
-        Some(obj) => <T as Insert>::insert_stmt(&mut t).await?,
+        Some(obj) => <T as Insert>::insert_stmt(),
         None => return Ok(()),
     };
+    let stmt = t.prep(stmt).await?;
 
     t.exec_batch(stmt, v.into_iter()).await?;
 

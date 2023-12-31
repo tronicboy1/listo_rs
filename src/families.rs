@@ -13,6 +13,7 @@ use crate::{
     auth::{Claims, JwTokenReaderLayer},
     get_conn, map_internal_error,
     users::User,
+    Insert,
 };
 
 use self::guard::FamiliesGuardLayer;

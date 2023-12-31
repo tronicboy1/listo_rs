@@ -27,13 +27,11 @@ impl Into<Params> for List {
 }
 
 impl Insert for List {
-    async fn insert_stmt<T>(conn: &mut T) -> Result<mysql_async::Statement, mysql_async::Error>
+    fn insert_stmt() -> &'static str
     where
-        T: mysql_async::prelude::Queryable,
         Self: Sized,
     {
-        conn.prep("INSERT INTO lists (`name`, family_id, list_id) VALUES (?, ?, ?);")
-            .await
+        "INSERT INTO lists (`name`, family_id, list_id) VALUES (?, ?, ?);"
     }
 }
 
@@ -137,7 +135,7 @@ impl FromRow for List {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, FromRow)]
 pub struct Item {
     item_id: u64,
     list_id: u64,
@@ -145,17 +143,13 @@ pub struct Item {
     pub amount: u64,
 }
 
-impl FromRow for Item {
-    fn from_row_opt(mut row: mysql_async::Row) -> Result<Self, mysql_async::FromRowError>
+impl Insert for Item {
+    fn insert_stmt() -> &'static str
     where
         Self: Sized,
     {
-        Ok(Self {
-            item_id: find_col_or_err!(row, "item_id")?,
-            list_id: find_col_or_err!(row, "list_id")?,
-            name: find_col_or_err!(row, "name")?,
-            amount: find_col_or_err!(row, "amount")?,
-        })
+        "INSERT INTO list_items (list_id, name, amount)
+        VALUES (?, ?, ?);"
     }
 }
 
@@ -186,19 +180,6 @@ impl Item {
             .await?;
 
         conn.exec(stmt, vec![list_id]).await
-    }
-
-    pub async fn insert(self, conn: &mut Conn) -> Result<(), mysql_async::Error> {
-        let stmt = conn
-            .prep(
-                "INSERT INTO list_items (
-            list_id, name, amount
-        ) VALUES (?, ?, ?);",
-            )
-            .await?;
-
-        let params: Params = self.into();
-        conn.exec_drop(stmt, params).await
     }
 
     pub async fn delete(conn: &mut Conn, item_id: u64) -> Result<(), mysql_async::Error> {

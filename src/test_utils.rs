@@ -3,7 +3,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::families::Family;
+use crate::{families::Family, Insert};
 
 pub struct TestState {
     pub pool: mysql_async::Pool,

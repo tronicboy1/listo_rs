@@ -1,7 +1,7 @@
 use mysql_async::{prelude::*, Conn, Params, Pool};
 use serde::ser::{Serialize, SerializeStruct};
 
-use crate::{find_col_or_err, users::User};
+use crate::{find_col_or_err, users::User, Insert};
 
 /// A group (family) of users that have access to lists
 /// A family object owns lists, and multiple users belong to a family.
@@ -10,6 +10,12 @@ pub struct Family {
     pub family_id: u64,
     pub family_name: String,
     pub members: Option<Vec<User>>,
+}
+
+impl Into<Params> for Family {
+    fn into(self) -> Params {
+        Params::Positional(vec![self.family_name.into(), self.family_id.into()])
+    }
 }
 
 impl Serialize for Family {
@@ -30,6 +36,15 @@ impl Serialize for Family {
     }
 }
 
+impl Insert for Family {
+    fn insert_stmt() -> &'static str
+    where
+        Self: Sized,
+    {
+        "INSERT INTO families (family_name, family_id) VALUES (?, ?);"
+    }
+}
+
 impl Family {
     pub fn new(family_name: String) -> Self {
         Self {
@@ -37,20 +52,6 @@ impl Family {
             family_name,
             members: None,
         }
-    }
-
-    pub async fn insert(self, conn: &mut Conn) -> Result<u64, mysql_async::Error> {
-        let stmt = conn
-            .prep("INSERT INTO families (family_name) VALUES (?);")
-            .await?;
-
-        let params = Params::Positional(vec![self.family_name.into()]);
-        conn.exec_drop(stmt, params).await?;
-
-        Ok(conn
-            .exec_first("SELECT LAST_INSERT_ID();", ())
-            .await?
-            .expect("mysql guarantees id returned"))
     }
 
     pub async fn destroy(conn: &mut Conn, family_id: u64) -> Result<(), mysql_async::Error> {
@@ -213,9 +214,7 @@ mod tests {
 
         Family::add_member(&mut conn, family_id, 1).await.unwrap();
 
-        let families = Family::paginate(&state.pool, 1, false)
-            .await
-            .unwrap();
+        let families = Family::paginate(&state.pool, 1, false).await.unwrap();
         assert!(families
             .iter()
             .find(|fam| fam.family_id == family_id)
