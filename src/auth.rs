@@ -34,10 +34,11 @@ use webauthn_rs::{
 
 use crate::{get_conn, users::User};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 struct AuthState {
     pool: Pool,
     webauthn: Arc<Webauthn>,
+    encoding_key: EncodingKey,
 }
 
 impl AuthState {
@@ -58,7 +59,17 @@ impl AuthState {
 
         let webauthn = Arc::new(webauthn_builder.build().expect("Invalid webauthn config"));
 
-        Self { pool, webauthn }
+        let secret_key = match std::env::var("JWT_SECRET_KEY") {
+            Ok(key) => key.as_bytes().to_owned(),
+            Err(_) => SECRET_KEY.to_owned(),
+        };
+        let encoding_key = EncodingKey::from_secret(&secret_key);
+
+        Self {
+            pool,
+            webauthn,
+            encoding_key,
+        }
     }
 }
 
@@ -112,17 +123,20 @@ impl Claims {
         }
     }
 
-    fn token(&self) -> Result<String, jsonwebtoken::errors::Error> {
-        let secret = std::env::var("JWT_SECRET_KEY");
+    pub fn to_cookie<'a>(&self, encoding_key: &EncodingKey) -> anyhow::Result<Cookie<'a>> {
+        let token = encode(&jsonwebtoken::Header::default(), &self, encoding_key)?;
 
-        encode(
-            &jsonwebtoken::Header::default(),
-            &self,
-            &EncodingKey::from_secret(match secret.as_ref() {
-                Ok(secret) => secret.as_bytes(),
-                Err(_) => SECRET_KEY,
-            }),
-        )
+        let mut week_from_now = time::OffsetDateTime::now_utc();
+        week_from_now += time::Duration::days(7);
+
+        let c = Cookie::build(("jwt", token))
+            .path("/")
+            .http_only(true)
+            .same_site(cookie::SameSite::Strict)
+            .expires(week_from_now)
+            .build();
+
+        Ok(c)
     }
 }
 
@@ -155,7 +169,9 @@ macro_rules! return_400_if_bad_recaptcha {
 }
 
 async fn create_user(
-    State(AuthState { pool, .. }): State<AuthState>,
+    State(AuthState {
+        pool, encoding_key, ..
+    }): State<AuthState>,
     Json(user_body): Json<UserBody>,
 ) -> Result<axum::response::Response, StatusCode> {
     return_400_if_bad_recaptcha!(&user_body.token);
@@ -185,11 +201,7 @@ async fn create_user(
 
     let claim = Claims::new(user_id);
 
-    let token = claim
-        .token()
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let cookie: Cookie = Cookie::build(("jwt", token)).path("/").into();
+    let cookie = claim.to_cookie(&encoding_key).unwrap();
 
     Ok((
         StatusCode::CREATED,
@@ -199,7 +211,9 @@ async fn create_user(
 }
 
 async fn login(
-    State(AuthState { pool, .. }): State<AuthState>,
+    State(AuthState {
+        pool, encoding_key, ..
+    }): State<AuthState>,
     Json(UserBody {
         email,
         password,
@@ -220,11 +234,7 @@ async fn login(
         if password_valid {
             let claim = Claims::new(user.user_id);
 
-            let token = claim
-                .token()
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-            let cookie: Cookie = Cookie::build(("jwt", token)).path("/").into();
+            let cookie = claim.to_cookie(&encoding_key).unwrap();
 
             Ok((
                 StatusCode::OK,
@@ -266,7 +276,11 @@ struct WebauthnOptionsBody {
     email: String,
 }
 async fn webauthn_start_reg(
-    State(AuthState { pool, webauthn }): State<AuthState>,
+    State(AuthState {
+        pool,
+        webauthn,
+        encoding_key,
+    }): State<AuthState>,
     Json(UserBody {
         email,
         password,
@@ -335,7 +349,11 @@ async fn webauthn_start_reg(
 }
 
 async fn webauthn_finish_reg(
-    State(AuthState { pool, webauthn }): State<AuthState>,
+    State(AuthState {
+        pool,
+        webauthn,
+        encoding_key,
+    }): State<AuthState>,
     headers: HeaderMap,
     Json(reg): Json<RegisterPublicKeyCredential>,
 ) -> Response {
@@ -363,12 +381,14 @@ async fn webauthn_finish_reg(
 
                     user.update(&mut conn).await.expect("sql error");
 
-                    let claims_token = Claims::new(user_id)
-                        .token()
-                        .expect("JWT token creation error");
-                    let cookie = Cookie::build(("jwt", claims_token)).path("/").to_string();
+                    let claim = Claims::new(user_id);
+                    let cookie = claim.to_cookie(&encoding_key).unwrap();
 
-                    (StatusCode::OK, AppendHeaders([(SET_COOKIE, cookie)])).into_response()
+                    (
+                        StatusCode::OK,
+                        AppendHeaders([(SET_COOKIE, cookie.to_string())]),
+                    )
+                        .into_response()
                 }
                 Err(error) => {
                     dbg!(error);
@@ -382,7 +402,7 @@ async fn webauthn_finish_reg(
 }
 
 async fn webauthn_start_auth(
-    State(AuthState { pool, webauthn }): State<AuthState>,
+    State(AuthState { pool, webauthn, .. }): State<AuthState>,
     Json(WebauthnOptionsBody { email }): Json<WebauthnOptionsBody>,
 ) -> axum::response::Response {
     let mut conn = pool.get_conn().await.expect("sql error");
@@ -425,7 +445,11 @@ async fn webauthn_start_auth(
 }
 
 async fn webauthn_finish_auth(
-    State(AuthState { pool, webauthn }): State<AuthState>,
+    State(AuthState {
+        pool,
+        webauthn,
+        encoding_key,
+    }): State<AuthState>,
     headers: HeaderMap,
     Json(auth): Json<PublicKeyCredential>,
 ) -> axum::response::Response {
@@ -443,10 +467,8 @@ async fn webauthn_finish_auth(
                     // TODO check login count
                     // TODO increment counter
 
-                    let claims_token = Claims::new(user_id)
-                        .token()
-                        .expect("JWT token creation error");
-                    let cookie = Cookie::build(("jwt", claims_token)).path("/").to_string();
+                    let claim = Claims::new(user_id);
+                    let cookie = claim.to_cookie(&encoding_key).unwrap().to_string();
 
                     (StatusCode::OK, AppendHeaders([(SET_COOKIE, cookie)])).into_response()
                 }
