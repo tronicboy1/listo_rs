@@ -246,10 +246,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "axum_l18n"
+name = "axum_l10n"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ebb51178a677ba860a8dc02e262e257ec65a3f760af58c4f7423fda85448d45e"
+checksum = "bd23d387ec941f8d717a750cf2b62db6364da4fcdebeb25d9116d1c6ea52b893"
 dependencies = [
  "axum",
  "fluent",
@@ -1572,7 +1572,7 @@ dependencies = [
  "argon2",
  "axum",
  "axum-server",
- "axum_l18n",
+ "axum_l10n",
  "cookie",
  "fluent",
  "http 1.0.0",
