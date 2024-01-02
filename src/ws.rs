@@ -18,7 +18,7 @@ pub async fn handle_ws_req(
     if let Some(Extension(Claims { sub, .. })) = claim {
         ws.on_upgrade(move |socket| handle_socket(socket, sub, state))
     } else {
-        StatusCode::UNAUTHORIZED.into_response()
+        StatusCode::BAD_REQUEST.into_response()
     }
 }
 

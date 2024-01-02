@@ -6,9 +6,11 @@ use axum::{
     routing::get,
     Extension, Router,
 };
+use axum_l18n::Localizer;
 use http::StatusCode;
 use mysql_async::Pool;
 use tera::{Context, Tera};
+use unic_langid::LanguageIdentifier;
 
 mod i18n;
 
@@ -18,7 +20,7 @@ use crate::{
     lists::model::{Item, List},
 };
 
-use self::i18n::{LanguageIdentifierExtractorLayer, Localizer, TeraLanguageIdentifier};
+use self::i18n::{ENGLISH, JAPANESE};
 
 macro_rules! return_if_not_logged_in {
     ($claim: expr) => {{
@@ -41,7 +43,16 @@ struct ViewRouterState {
 impl ViewRouterState {
     fn new(pool: Pool) -> Self {
         let mut tera = Tera::new("src/views/templates/**/*").expect("tera parsing error");
-        let localizer = Localizer::new();
+
+        let mut localizer = Localizer::new();
+
+        localizer
+            .add_bundle(JAPANESE, &["locales/ja/main.ftl", "locales/ja/login.ftl"])
+            .unwrap();
+        localizer
+            .add_bundle(ENGLISH, &["locales/en/main.ftl", "locales/en/login.ftl"])
+            .unwrap();
+
         tera.register_function("fluent", localizer);
 
         Self {
@@ -76,7 +87,7 @@ impl ViewRouter {
                     get(
                         |State(state): State<ViewRouterState>,
                          claim: Option<Extension<Claims>>,
-                         Extension(lang): Extension<TeraLanguageIdentifier>,
+                         Extension(lang): Extension<LanguageIdentifier>,
                          Path((_, list_id)): Path<(String, u64)>| async move {
                             let claim = return_if_not_logged_in!(claim);
 
@@ -99,23 +110,29 @@ impl ViewRouter {
                 )
                 .route(
                     "/:lang/login",
-                    get(|State(state): State<ViewRouterState>,
-                    Extension(lang): Extension<TeraLanguageIdentifier>,| async move {
-                        let mut ctx = Context::new();
-                        ctx.insert("lang", &lang);
+                    get(
+                        |State(state): State<ViewRouterState>,
+                         Extension(lang): Extension<LanguageIdentifier>| async move {
+                            let mut ctx = Context::new();
+                            ctx.insert("lang", &lang);
 
-                        let html = state
-                            .tera
-                            .render("login.html", &ctx)
-                            .expect("Template failed");
+                            let html = state
+                                .tera
+                                .render("login.html", &ctx)
+                                .expect("Template failed");
 
-                        Html(html)
-                    }),
+                            Html(html)
+                        },
+                    ),
                 )
                 .route("/:lang/families", get(view_families))
                 .layer(
                     tower::ServiceBuilder::new()
-                        .layer(LanguageIdentifierExtractorLayer)
+                        .layer(axum_l18n::LanguageIdentifierExtractorLayer::new(
+                            ENGLISH,
+                            vec![ENGLISH, JAPANESE],
+                            axum_l18n::RedirectMode::RedirectToLanguageSubPath,
+                        ))
                         .layer(JwTokenReaderLayer),
                 )
                 .with_state(ViewRouterState::new(pool)),
@@ -132,7 +149,7 @@ impl Into<Router> for ViewRouter {
 async fn lists_view(
     State(state): State<ViewRouterState>,
     claim: Option<Extension<Claims>>,
-    Extension(lang): Extension<TeraLanguageIdentifier>,
+    Extension(lang): Extension<LanguageIdentifier>,
 ) -> axum::response::Response {
     let claim = return_if_not_logged_in!(claim);
 
@@ -161,7 +178,7 @@ async fn lists_view(
 async fn view_families(
     State(state): State<ViewRouterState>,
     claim: Option<Extension<Claims>>,
-    Extension(lang): Extension<TeraLanguageIdentifier>,
+    Extension(lang): Extension<LanguageIdentifier>,
 ) -> axum::response::Response {
     let claim = return_if_not_logged_in!(claim);
 
@@ -182,7 +199,7 @@ async fn view_families(
 }
 
 /// Renders a list into a listo-list web component HTML template
-fn render_list(tera: &Tera, list: &List, user_id: u64, lang: &TeraLanguageIdentifier) -> String {
+fn render_list(tera: &Tera, list: &List, user_id: u64, lang: &LanguageIdentifier) -> String {
     let mut ctx = Context::new();
     ctx.insert("list", list);
     ctx.insert("user_id", &user_id);

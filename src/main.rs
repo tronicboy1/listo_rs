@@ -59,8 +59,8 @@ async fn main() {
             .await
             .unwrap();
     } else {
-        axum::Server::bind(&addr)
-            .serve(app.into_make_service())
+        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+        axum::serve(listener, app)
             .with_graceful_shutdown(async move { rx.await.unwrap() })
             .await
             .unwrap();

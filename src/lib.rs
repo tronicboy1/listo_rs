@@ -144,7 +144,7 @@ where
     let mut t = conn.start_transaction(TxOpts::default()).await?;
 
     let stmt = match v.first() {
-        Some(obj) => <T as Insert>::insert_stmt(),
+        Some(_) => <T as Insert>::insert_stmt(),
         None => return Ok(()),
     };
     let stmt = t.prep(stmt).await?;

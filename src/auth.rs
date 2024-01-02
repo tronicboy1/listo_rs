@@ -276,11 +276,7 @@ struct WebauthnOptionsBody {
     email: String,
 }
 async fn webauthn_start_reg(
-    State(AuthState {
-        pool,
-        webauthn,
-        encoding_key,
-    }): State<AuthState>,
+    State(AuthState { pool, webauthn, .. }): State<AuthState>,
     Json(UserBody {
         email,
         password,
