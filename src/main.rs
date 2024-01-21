@@ -8,10 +8,14 @@ use listo_rs::{
     // For reference, not in use
     // images::ImagesRouter,
     lists::ListRouter,
-    views::ViewRouter,
+    views::{
+        i18n::{ENGLISH, JAPANESE},
+        ViewRouter,
+    },
     ws::handle_ws_req,
     AppState,
 };
+use tower::Layer;
 use tower_http::{compression::CompressionLayer, services::ServeDir};
 
 #[tokio::main]
@@ -38,6 +42,18 @@ async fn main() {
         .nest_service("/.well-known/pki-validation", serve_cname)
         .layer(CompressionLayer::new());
 
+    // https://docs.rs/axum/latest/axum/middleware/index.html#rewriting-request-uri-in-middleware
+    // apply the layer around the whole `Router`
+    // this way the middleware will run before `Router` receives the request
+    let i18n_redir = axum_l10n::LanguageIdentifierExtractorLayer::new(
+        ENGLISH,
+        vec![ENGLISH, JAPANESE],
+        axum_l10n::RedirectMode::RedirectToFullLocaleSubPath,
+    )
+    .excluded_paths(&["/.well-known", "/assets", "/api", "/ws"]);
+
+    let app_w_redir = i18n_redir.layer(app);
+
     let port: u16 = std::env::var("PORT")
         .unwrap_or(String::from("3000"))
         .parse()
@@ -54,15 +70,24 @@ async fn main() {
             .expect("could not read certs");
 
         axum_server::bind_rustls(addr, config)
-            .serve(app.into_make_service())
+            .serve(
+                <axum_l10n::LanguageIdentifierExtractor<Router> as axum::ServiceExt<
+                    axum::http::Request<axum::body::Body>,
+                >>::into_make_service(app_w_redir),
+            )
             // .with_graceful_shutdown(async move { rx.await.unwrap() })
             .await
             .unwrap();
     } else {
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-        axum::serve(listener, app)
-            .with_graceful_shutdown(async move { rx.await.unwrap() })
-            .await
-            .unwrap();
+        axum::serve(
+            listener,
+            <axum_l10n::LanguageIdentifierExtractor<Router> as axum::ServiceExt<
+                axum::http::Request<axum::body::Body>,
+            >>::into_make_service(app_w_redir),
+        )
+        .with_graceful_shutdown(async move { rx.await.unwrap() })
+        .await
+        .unwrap();
     }
 }

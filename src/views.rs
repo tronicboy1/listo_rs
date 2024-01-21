@@ -6,13 +6,13 @@ use axum::{
     routing::get,
     Extension, Router,
 };
-use axum_l18n::Localizer;
+use axum_l10n::Localizer;
 use http::StatusCode;
 use mysql_async::Pool;
 use tera::{Context, Tera};
 use unic_langid::LanguageIdentifier;
 
-mod i18n;
+pub mod i18n;
 
 use crate::{
     auth::{Claims, JwTokenReaderLayer},
@@ -68,7 +68,7 @@ impl ViewRouter {
             Router::new()
                 // Left for reference, not in use 20231101
                 // .route(
-                //     "/:lang/upload",
+                //     "/upload",
                 //     get(|State(state): State<ViewRouterState>| async move {
                 //         let mut context = Context::new();
                 //         context.insert("name", "austin");
@@ -79,11 +79,10 @@ impl ViewRouter {
                 //         Html(html)
                 //     }),
                 // )
-                .route("/:lang", get(|| async { Redirect::to("/lists") }))
-                .route("/:lang/", get(|| async { Redirect::to("/lists") }))
-                .route("/:lang/lists", get(lists_view))
+                .route("/", get(|| async { Redirect::to("/lists") }))
+                .route("/lists", get(lists_view))
                 .route(
-                    "/:lang/lists/:list_id",
+                    "/lists/:list_id",
                     get(
                         |State(state): State<ViewRouterState>,
                          claim: Option<Extension<Claims>>,
@@ -109,7 +108,7 @@ impl ViewRouter {
                     ),
                 )
                 .route(
-                    "/:lang/login",
+                    "/login",
                     get(
                         |State(state): State<ViewRouterState>,
                          Extension(lang): Extension<LanguageIdentifier>| async move {
@@ -125,16 +124,8 @@ impl ViewRouter {
                         },
                     ),
                 )
-                .route("/:lang/families", get(view_families))
-                .layer(
-                    tower::ServiceBuilder::new()
-                        .layer(axum_l18n::LanguageIdentifierExtractorLayer::new(
-                            ENGLISH,
-                            vec![ENGLISH, JAPANESE],
-                            axum_l18n::RedirectMode::RedirectToLanguageSubPath,
-                        ))
-                        .layer(JwTokenReaderLayer),
-                )
+                .route("/families", get(view_families))
+                .layer(JwTokenReaderLayer)
                 .with_state(ViewRouterState::new(pool)),
         )
     }

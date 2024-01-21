@@ -247,9 +247,9 @@ dependencies = [
 
 [[package]]
 name = "axum_l10n"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd23d387ec941f8d717a750cf2b62db6364da4fcdebeb25d9116d1c6ea52b893"
+checksum = "97dce603eb77148cc667ead70ab058817e3c590ca66b29ada8779a3d026261d1"
 dependencies = [
  "axum",
  "fluent",
