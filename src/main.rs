@@ -27,7 +27,7 @@ async fn main() {
 
     // build our application with a single route
     let app = Router::new()
-        .route("/ws", get(handle_ws_req))
+        .route("/api/ws", get(handle_ws_req))
         .route_layer(JwTokenReaderLayer)
         .with_state(state.clone())
         .merge(ViewRouter::new(state.pool.clone()))
@@ -50,7 +50,7 @@ async fn main() {
         vec![ENGLISH, JAPANESE],
         axum_l10n::RedirectMode::RedirectToFullLocaleSubPath,
     )
-    .excluded_paths(&["/.well-known", "/assets", "/api", "/ws"]);
+    .excluded_paths(&["/.well-known", "/assets", "/api"]);
 
     let app_w_redir = i18n_redir.layer(app);
 

@@ -666,14 +666,14 @@ const J = "listo-lists-manager";
 class _t extends HTMLElement {
   constructor() {
     super(...arguments), this.socket = D({
-      url: "wss://" + location.host + "/ws",
+      url: "wss://" + location.host + "/api/ws",
       deserializer(e) {
         return JSON.parse(e.data);
       }
     }).pipe(
       N(
         () => D({
-          url: "ws://" + location.host + "/ws",
+          url: "ws://" + location.host + "/api/ws",
           deserializer(e) {
             return JSON.parse(e.data);
           }

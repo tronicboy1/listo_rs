@@ -11,14 +11,14 @@ export interface ItemChangeMessage {
 
 export class ListoListManager extends HTMLElement {
   socket = webSocket<ItemChangeMessage>({
-    url: "wss://" + location.host + "/ws",
+    url: "wss://" + location.host + "/api/ws",
     deserializer(e) {
       return JSON.parse(e.data);
     },
   }).pipe(
     catchError(() =>
       webSocket<ItemChangeMessage>({
-        url: "ws://" + location.host + "/ws",
+        url: "ws://" + location.host + "/api/ws",
         deserializer(e) {
           return JSON.parse(e.data);
         },
