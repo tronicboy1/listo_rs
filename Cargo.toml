@@ -16,7 +16,8 @@ fluent = "0.16.0"
 http = "1"
 intl-memoizer = "0.5.1"
 jsonwebtoken = "9.1.0"
-mysql_async = "0.32.2"
+mysql_async = "0.33"
+refinery = { version = "0.8.12", features = ["mysql_async"] }
 reqwest = { version = "0.11.22", features = ["json"] }
 serde = { version = "1.0.189", features = ["derive"] }
 serde_json = "1.0.108"

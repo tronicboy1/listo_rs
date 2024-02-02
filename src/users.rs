@@ -139,6 +139,7 @@ impl User {
         conn.exec_drop(stmt, params).await
     }
 
+    #[cfg(test)]
     async fn destroy(conn: &mut Conn, user_id: u64) -> Result<(), mysql_async::Error> {
         let stmt = conn.prep("DELETE FROM users WHERE user_id = ?;").await?;
 
