@@ -14,6 +14,7 @@ pub(crate) mod test_utils;
 pub mod users;
 pub mod views;
 pub mod ws;
+pub mod cookie_tools;
 
 #[derive(Debug, Clone)]
 pub struct AppState {

@@ -1,10 +1,9 @@
 use axum::http::Request;
-use cookie::Cookie;
-use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
-
 use tower::{Layer, Service};
 
-use super::{Claims, SECRET_KEY};
+use crate::cookie_tools::FromCookie;
+
+use super::Claims;
 
 /// Adds Jw Token claims data into request if the user is authenticated and has
 /// the JWT in it's request.
@@ -36,28 +35,17 @@ where
     }
 
     fn call(&mut self, mut req: Request<B>) -> Self::Future {
-        let validation = Validation::new(Algorithm::HS256);
-
-        let token = req
-            .headers()
-            .get("Cookie")
-            .and_then(|token_header| token_header.to_str().ok())
-            .and_then(|cookies| {
-                Cookie::split_parse(cookies)
-                    .filter_map(|cookie| cookie.ok())
-                    .find(|cookie| cookie.name() == "jwt")
-            })
-            .and_then(|encoded_token| {
-                decode::<Claims>(
-                    encoded_token.value(),
-                    &DecodingKey::from_secret(SECRET_KEY),
-                    &validation,
-                )
-                .ok()
-            });
+        let token = Claims::from_headers(req.headers());
 
         if let Some(token) = token {
-            req.extensions_mut().insert(token.claims);
+            match token {
+                Ok(claims) => {
+                    req.extensions_mut().insert(claims);
+                }
+                Err(err) => {
+                    dbg!(err);
+                }
+            }
         }
 
         self.inner.call(req)

@@ -14,7 +14,7 @@ use cookie::{
     Cookie,
 };
 use http::{header::SET_COOKIE, HeaderMap};
-use jsonwebtoken::{encode, EncodingKey};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Validation};
 use mysql_async::Pool;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -32,7 +32,7 @@ use webauthn_rs::{
     Webauthn, WebauthnBuilder,
 };
 
-use crate::{get_conn, users::User};
+use crate::{cookie_tools::FromCookie, get_conn, users::User};
 
 #[derive(Clone)]
 struct AuthState {
@@ -137,6 +137,40 @@ impl Claims {
             .build();
 
         Ok(c)
+    }
+}
+
+impl FromCookie for Claims {
+    type Error = jsonwebtoken::errors::Error;
+    const COOKIE_NAME: &'static str = "listo_rs_auth";
+
+    fn cookie_body(&self) -> Result<String, Self::Error> {
+        let secret_key = match std::env::var("JWT_SECRET_KEY") {
+            Ok(key) => key.as_bytes().to_owned(),
+            Err(_) => SECRET_KEY.to_owned(),
+        };
+
+        let encoding_key = EncodingKey::from_secret(&secret_key);
+
+        encode(&jsonwebtoken::Header::default(), &self, &encoding_key)
+    }
+
+    fn from_cookie<'a>(
+        cookie: &'a cookie::Cookie<'a>,
+    ) -> Result<Self, <Self as FromCookie>::Error> {
+        let secret_key = match std::env::var("JWT_SECRET_KEY") {
+            Ok(key) => key.as_bytes().to_owned(),
+            Err(_) => SECRET_KEY.to_owned(),
+        };
+
+        let validation = Validation::new(Algorithm::HS256);
+
+        decode(
+            cookie.value(),
+            &DecodingKey::from_secret(&secret_key),
+            &validation,
+        )
+        .map(|res| res.claims)
     }
 }
 
